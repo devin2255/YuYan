@@ -3,4 +3,4 @@ from config import settings
 
 
 def create_app():
-
+    pass
