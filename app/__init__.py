@@ -35,7 +35,12 @@ def apply_cors(app):
 
 
 def create_app(register_all=True):
-    app = FastAPI(title=settings.app_name)
+    app = FastAPI(
+        title=settings.app_name,
+        docs_url="/docs",
+        swagger_js_url="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-bundle.js",
+        swagger_css_url="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui.css",
+    )
     app.state.settings = settings  # 将 settings 挂载到 app.state
 
     if register_all:

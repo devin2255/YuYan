@@ -1,5 +1,4 @@
 from fastapi import HTTPException
-from pydantic import BaseModel, Field
 from tortoise.exceptions import DoesNotExist
 
 from app.api import BluePrint

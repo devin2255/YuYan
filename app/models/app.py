@@ -1,9 +1,9 @@
-
 import hashlib
 from datetime import datetime
 from tortoise import fields
-
 from app.models.base import BaseModel
+from fastapi import HTTPException, status
+from app.config.constants import ERROR_MESSAGES
 
 
 class App(BaseModel):
@@ -30,8 +30,8 @@ class App(BaseModel):
         创建应用记录，并自动生成 app_key。
         """
         app_id = kwargs.get("app_id")
-        if not app_id:
-            raise ValueError("app_id 不能为空")
+        # if not app_id:
+        #     raise ValueError("app_id 不能为空")
 
         # 生成 app_key
         app_key = cls.generate_app_key(app_id)
@@ -62,15 +62,17 @@ class App(BaseModel):
         # 截取前 key_length 位作为 app_key
         return hash_hex[:key_length]
 
-    async def update(self, **kwargs):
+    async def update(self, app_id: int, **kwargs):
         """
         更新应用记录。
         """
-        if "app_id" in kwargs:
-            raise ValueError("app_id 不可更新")
+        app = await self.get(id=app_id)
+        # if "app_id" in kwargs:
+        #     raise ValueError("app_id 不可更新")
         if "app_key" in kwargs:
-            raise ValueError("app_key 不可更新")
-        return await super().update(**kwargs)
+            # raise ValueError("app_key 不可更新")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.APP_KEY_NOT_SUPPORT_UPDATES)
+        return await app.update(**kwargs)
 
     @classmethod
     async def get_by_app_id(cls, app_id: str):
@@ -86,7 +88,7 @@ class App(BaseModel):
         """
         return await cls.query_all()
 
-    async def soft_delete_by_id(self, aid: int, delete_by: str = None):
+    async def soft_delete_by_id(self, app_id: int, delete_by: str = None):
         """
         根据 id 主键软删除应用记录。
 
@@ -94,15 +96,15 @@ class App(BaseModel):
         :param delete_by: 删除操作执行人
         :return: 删除是否成功
         """
-        app = await self.get(id=aid)
+        app = await self.get(id=app_id)
         return await app.delete(delete_by=delete_by)
 
-    async def hard_delete_by_id(self, aid: int):
+    async def hard_delete_by_id(self, app_id: int):
         """
         根据 id 主键硬删除应用记录。
 
         :param app_id: 应用的主键 id
         :return: 删除是否成功
         """
-        app = await self.get(id=aid)
+        app = await self.get(id=app_id)
         return await app.hard_delete()

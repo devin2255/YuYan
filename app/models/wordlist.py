@@ -1,6 +1,3 @@
-
-import hashlib
-from datetime import datetime
 from tortoise import fields
 
 from app.libs.enums import ListTypeEnum, MatchRuleEnum, ListSuggestEnum, RiskTypeEnum, SwitchEnum, LanguageEnum
@@ -24,7 +21,7 @@ class WordList(BaseModel):
         table = "wordlist"  # 数据库表名
 
     @classmethod
-    async def create_wordlist(cls, **kwargs):
+    async def create(cls, **kwargs):
         """
         创建新的名单
         :param kwargs: 名单字段
@@ -66,17 +63,23 @@ class WordList(BaseModel):
         """
         return await self.update(**kwargs)
 
-    async def delete_wordlist(self, delete_by: str = None):
+    async def soft_delete_by_id(self, wid: int, delete_by: str = None):
         """
-        软删除名单
+        根据 id 主键软删除名单。
+
+        :param wid: 名单的主键 id
         :param delete_by: 删除人
         :return: 删除结果
         """
-        return await self.delete(delete_by=delete_by)
+        w = await self.get(id=wid)
+        return await w.delete(delete_by=delete_by)
 
-    async def hard_delete_wordlist(self):
+    async def hard_delete_by_id(self, wid: int):
         """
-        硬删除名单
+        根据 id 主键硬删除名单。
+
+        :param wid: 名单的主键 id
         :return: 删除结果
         """
-        return await self.hard_delete()
+        w = await self.get(id=wid)
+        return await w.hard_delete()

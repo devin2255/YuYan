@@ -1,6 +1,7 @@
-from typing import Dict
+from fastapi import status, HTTPException
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from app.config.constants import ERROR_MESSAGES
 from app.libs.enums import LanguageEnum, ListSuggestEnum, ListTypeEnum, MatchRuleEnum, RiskTypeEnum, SwitchEnum
 
 
@@ -20,17 +21,36 @@ class CreateOrUpdateWordListRequest(BaseModel):
     @model_validator(mode='after')
     def validate_all_fields(self):
         if self.list_type not in ListTypeEnum.values():
-            raise ValueError(f"无效的名单类型，可选值为: {ListTypeEnum.values()}")
+            # raise ValueError(f"无效的名单类型，可选值为: {ListTypeEnum.values()}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.INVALID_LIST_TYPE
+            )
         if self.match_rule not in MatchRuleEnum.values():
-            raise ValueError(f"无效的匹配规则，可选值为: {MatchRuleEnum.values()}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.INVALID_LIST_MATCH_RULE
+            )
         if self.suggestion not in ListSuggestEnum.values():
-            raise ValueError(f"无效的处置建议，可选值为: {ListSuggestEnum.values()}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.INVALID_LIST_SUGGESTION
+            )
         if self.risk_type not in RiskTypeEnum.values():
-            raise ValueError(f"无效的风险类型，可选值为: {RiskTypeEnum.values()}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.INVALID_RISK_TYPE
+            )
         if self.status not in SwitchEnum.values():
-            raise ValueError(f"无效的名单状态，可选值为: {SwitchEnum.values()}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.INVALID_STATUS
+            )
         if self.language not in LanguageEnum.values():
-            raise ValueError(f"无效的名单语种，可选值为: {LanguageEnum.values()}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.INVALID_LANGUAGE
+            )
         return self
 
     # @field_validator('list_type')
