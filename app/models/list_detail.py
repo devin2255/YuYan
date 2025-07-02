@@ -8,7 +8,7 @@ class ListDetail(BaseModel):
     名单详情模型类，继承自 BaseModel
     """
     id = fields.IntField(pk=True, description="自增主键")
-    list_id = fields.IntField(nullable=False, description="名单id，关联wordlist id字段")
+    list_id = fields.ForeignKeyField('models.WordList', related_name='details', description="名单id，关联wordlist id字段")
     original_text = fields.CharField(max_length=100, null=False, description="原始文本内容")
     processed_text = fields.CharField(max_length=100, null=False, description="处理后的文本(如分词、去除特殊符号等)",
                                       index=True)
@@ -16,10 +16,6 @@ class ListDetail(BaseModel):
 
     class Meta:
         table = "list_detail"  # 数据库表名
-        # 添加外键关联
-        foreign_keys = {
-            "list_id": "wordlist.id"
-        }
 
     @classmethod
     async def create_detail(cls, **kwargs):
@@ -37,10 +33,10 @@ class ListDetail(BaseModel):
         :param list_id: 名单ID
         :return: 详情列表
         """
-        return await cls.filter(list_id=list_id).all()
+        return await cls.filter(list_id=list_id, delete_time__isnull=True).all()
 
     @classmethod
-    async def get_details_by_list_id_pagenation(
+    async def get_details_by_list_id_pagination(
         cls, 
         list_id: int, 
         page: int = 1, 
@@ -58,8 +54,8 @@ class ListDetail(BaseModel):
         page_size = min(max(page_size, 1), 100)  # 限制每页最多100条
         
         offset = (page - 1) * page_size
-        query = cls.filter(list_id=list_id)
-        
+        query = cls.filter(list_id=list_id, delete_time__isnull=True)
+
         # 并行获取总数和分页数据
         total, data = await asyncio.gather(
             query.count(),

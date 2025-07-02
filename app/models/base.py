@@ -31,7 +31,6 @@ class MixinJSONSerializer:
         """
         # 获取所有字段（包括 Tortoise ORM 的字段）
         columns = [field for field in self._meta.fields_map.keys()]
-        print(columns)
 
         if not self._fields:
             all_columns = set(columns)
@@ -117,7 +116,7 @@ class BaseModel(models.Model):
         """
         硬删除（彻底删除）。
         """
-        await self.delete()
+        return await super().delete()
 
     @classmethod
     async def get(cls, **kwargs):
@@ -151,7 +150,7 @@ class BaseModel(models.Model):
         """
         查询所有记录（默认软删除过滤）。
         """
-        return await cls.filter(**kwargs, delete_time__isnull=True).exclude()
+        return await cls.filter(**kwargs, delete_time__isnull=True).all()
 
 
 def camel2line(camel: str):
