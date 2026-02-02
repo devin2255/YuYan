@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+gunicorn
+sqlalchemy
+pymysql
+redis
+requests
+apscheduler
+pydantic-settings
+python-multipart
+pyahocorasick
+janome
+six
