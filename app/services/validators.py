@@ -3,20 +3,20 @@ from __future__ import annotations
 import json
 from typing import Any, Dict
 
-from yuyan.app.core.exceptions import ParameterException
+from app.core.exceptions import ParameterException
 
 
 
 TEXT_REQUIRED_FIELDS = [
     "timestamp",
-    "tokenId",
+    "token_id",
     "nickname",
     "text",
-    "serverId",
-    "accountId",
-    "gameId",
-    "roleId",
-    "vipLevel",
+    "server_id",
+    "account_id",
+    "app_id",
+    "role_id",
+    "vip_level",
     "level",
     "ip",
     "channel",
@@ -25,19 +25,20 @@ TEXT_REQUIRED_FIELDS = [
 IMAGE_REQUIRED_FIELDS = [
     "timestamp",
     "img",
-    "serverId",
-    "accountId",
-    "gameId",
-    "roleId",
-    "vipLevel",
+    "server_id",
+    "account_id",
+    "app_id",
+    "role_id",
+    "vip_level",
     "level",
     "ip",
     "channel",
-    "targetId",
-    "organizationId",
-    "teamId",
-    "sceneId",
+    "target_id",
+    "organization_id",
+    "team_id",
+    "scene_id",
 ]
+
 
 
 class Field:
@@ -74,43 +75,12 @@ def ensure_required_fields(raw_data: Dict[str, Any], required_fields) -> None:
         raise ParameterException(msg=f"参数不合法(data key {missing[0]} not exist)")
 
 
-def validate_access_key(access_key: str, game_id: str, ctx) -> None:
+def validate_access_key(access_key: str, app_id: str, ctx) -> None:
     if not access_key or not str(access_key).strip():
-        raise ParameterException(msg="参数不合法(accessKey not exist)")
+        raise ParameterException(msg="参数不合法(access_key not exist)")
     cache_map = ctx.config.get("ACCESS_KEY", {})
     fallback_map = ctx.config.get("ACCESS_KEY_FALLBACK", {})
-    if fallback_map.get(access_key) is None and cache_map.get(str(game_id), "") != access_key:
-        raise ParameterException(msg="参数不合法(accessKey not exist)")
+    if fallback_map.get(access_key) is None and cache_map.get(str(app_id), "") != access_key:
+        raise ParameterException(msg="参数不合法(access_key not exist)")
 
 
-async def parse_request_payload(request) -> Dict[str, Any]:
-    data = {}
-    try:
-        data = await request.json()
-    except Exception:
-        data = {}
-    if data:
-        return data
-
-    try:
-        form = await request.form()
-        if form:
-            for key, value in form.multi_items():
-                if key in data:
-                    if not isinstance(data[key], list):
-                        data[key] = [data[key]]
-                    data[key].append(value)
-                else:
-                    data[key] = value
-            return data
-    except Exception:
-        pass
-
-    for key, value in request.query_params.multi_items():
-        if key in data:
-            if not isinstance(data[key], list):
-                data[key] = [data[key]]
-            data[key].append(value)
-        else:
-            data[key] = value
-    return data

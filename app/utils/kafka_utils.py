@@ -5,11 +5,11 @@ import json
 def submit_kafka(data_params, response, ctx):
     try:
         one_row = write_hdfs_log(data_params, response)
-        tag = "plat_" + str(data_params["gameId"]) + "_chatmsg"
+        tag = "plat_" + str(data_params["app_id"]) + "_chatmsg"
         log_line = str(tag) + "\t" + str(one_row)
         ctx.kafka_logger.write_msg(log_line)
 
-        qp_dict = {"request_data": data_params, "response_data": response, "game_id": str(data_params["gameId"])}
+        qp_dict = {"request_data": data_params, "response_data": response, "app_id": str(data_params["app_id"])}
         ctx.kafka_logger.write_query(json.dumps(qp_dict, ensure_ascii=False))
 
         text_dict = transfor_json(data_params, response)
@@ -20,12 +20,12 @@ def submit_kafka(data_params, response, ctx):
 
 def submit_img_kafka(data_params, response, ctx):
     try:
-        qp_dict = {"request_data": data_params, "response_data": response, "game_id": str(data_params["gameId"])}
+        qp_dict = {"request_data": data_params, "response_data": response, "app_id": str(data_params["app_id"])}
         ctx.kafka_logger.write_query(json.dumps(qp_dict, ensure_ascii=False))
         img_dict = {}
         img_dict.update(data_params)
         img_dict.update(response)
-        img_dict["game_id"] = str(data_params["gameId"])
+        img_dict["app_id"] = str(data_params["app_id"])
         ctx.kafka_logger.write_img(json.dumps(img_dict, ensure_ascii=False))
     except Exception as err:
         ctx.logger.debug(f"write img request log err: {err}")
@@ -35,24 +35,24 @@ def write_hdfs_log(data_json, response):
     data_json = collections.defaultdict(handle, data_json)
     response = collections.defaultdict(handle, response)
     one_row = "%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s" % (
-        str(data_json["btId"]),
+        str(data_json["bt_id"]),
         str(data_json["timestamp"]),
-        str(data_json["tokenId"]),
+        str(data_json["token_id"]),
         str(data_json["nickname"]).replace("'", "").replace("|", "").replace("\n", ""),
         str(data_json["text"]).replace("\r", "").replace("'", "").replace("|", "").replace("\n", ""),
-        str(data_json["gameId"]),
-        str(data_json["serverId"]),
-        str(data_json["accountId"]),
-        str(data_json["roleId"]),
-        str(data_json["vipLevel"]),
+        str(data_json["app_id"]),
+        str(data_json["server_id"]),
+        str(data_json["account_id"]),
+        str(data_json["role_id"]),
+        str(data_json["vip_level"]),
         str(data_json["level"]),
         str(data_json["ip"]),
         str(data_json["channel"]),
         str(data_json["relationship"]),
-        str(data_json["targetId"]),
-        str(data_json["organizationId"]),
-        str(data_json["teamId"]),
-        str(data_json["sceneId"]),
+        str(data_json["target_id"]),
+        str(data_json["organization_id"]),
+        str(data_json["team_id"]),
+        str(data_json["scene_id"]),
         str(data_json["mac"]),
         str(data_json["uuid"]),
         str(data_json["idfv"]),
@@ -63,7 +63,7 @@ def write_hdfs_log(data_json, response):
         str(data_json["title"]).replace("|", ""),
         str(data_json["topic"]).replace("|", ""),
         str(data_json["nickocr"]).replace("|", ""),
-        str(data_json["channelId"]),
+        str(data_json["channel_id"]),
         str(data_json["sumPay"]),
         str(data_json["logtime"]),
         str(data_json["logday"]),
@@ -89,25 +89,24 @@ def transfor_json(data_json, response):
     data_json = collections.defaultdict(handle, data_json)
     response = collections.defaultdict(handle, response)
     text_dict = {}
-    text_dict["game_id"] = str(data_json["gameId"])
-    text_dict["request_id"] = str(data_json["btId"])
+    text_dict["app_id"] = str(data_json["app_id"])
+    text_dict["request_id"] = str(data_json["bt_id"])
     text_dict["timestamp"] = str(data_json["timestamp"])
-    text_dict["token_id"] = str(data_json["tokenId"])
+    text_dict["token_id"] = str(data_json["token_id"])
     text_dict["role_name"] = str(data_json["nickname"]).replace("'", "").replace("|", "").replace("\n", "")
     text_dict["text"] = str(data_json["text"]).replace("\r", "").replace("'", "").replace("|", "").replace("\n", "")
-    text_dict["gameid"] = str(data_json["gameId"])
-    text_dict["server_id"] = str(data_json["serverId"])
-    text_dict["account_id"] = str(data_json["accountId"])
-    text_dict["role_id"] = str(data_json["roleId"])
-    text_dict["role_vip"] = str(data_json["vipLevel"])
+    text_dict["server_id"] = str(data_json["server_id"])
+    text_dict["account_id"] = str(data_json["account_id"])
+    text_dict["role_id"] = str(data_json["role_id"])
+    text_dict["role_vip"] = str(data_json["vip_level"])
     text_dict["role_level"] = str(data_json["level"])
     text_dict["ip"] = str(data_json["ip"])
     text_dict["channel"] = str(data_json["channel"])
     text_dict["relationship"] = str(data_json["relationship"])
-    text_dict["target_id"] = str(data_json["targetId"])
-    text_dict["union_id"] = str(data_json["organizationId"])
-    text_dict["team_id"] = str(data_json["teamId"])
-    text_dict["scene_id"] = str(data_json["sceneId"])
+    text_dict["target_id"] = str(data_json["target_id"])
+    text_dict["union_id"] = str(data_json["organization_id"])
+    text_dict["team_id"] = str(data_json["team_id"])
+    text_dict["scene_id"] = str(data_json["scene_id"])
     text_dict["mac"] = str(data_json["mac"])
     text_dict["uuid"] = str(data_json["uuid"])
     text_dict["idfv"] = str(data_json["idfv"])
@@ -118,7 +117,7 @@ def transfor_json(data_json, response):
     text_dict["title"] = str(data_json["title"]).replace("|", "")
     text_dict["topic"] = str(data_json["topic"]).replace("|", "")
     text_dict["nick_orc"] = str(data_json["nickocr"]).replace("|", "")
-    text_dict["channel_id"] = str(data_json["channelId"])
+    text_dict["channel_id"] = str(data_json["channel_id"])
     text_dict["total_pay_money"] = str(data_json["sumPay"])
     text_dict["register_datetime"] = str(data_json["logtime"])
     text_dict["register_date"] = str(data_json["logday"])

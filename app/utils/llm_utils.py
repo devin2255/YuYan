@@ -1,7 +1,7 @@
 import requests
 
 
-prompt = """你是一位游戏场景的文本风控专家。请负责识别用户发言场景中的黑产发送的账号买卖的可疑交易行为内容。
+prompt = """你是一位应用场景的文本风控专家。请负责识别用户发言场景中的黑产发送的账号买卖的可疑交易行为内容。
 
 用户当前发言内容：{{latest_chat}}, 用户最近几次发言情况: {{recent_chat_history}}
 
@@ -18,9 +18,9 @@ prompt = """你是一位游戏场景的文本风控专家。请负责识别用�
 url = "http://ai.llm.yoozoo.com/v1/chat/completions"
 
 
-def get_llm_ans(game_id, latest_chat, recent_chat_history):
+def get_llm_ans(app_id, latest_chat, recent_chat_history):
     try:
-        if str(game_id) not in ["2013101", "2013001"] or not recent_chat_history:
+        if str(app_id) not in ["2013101", "2013001"] or not recent_chat_history:
             return False
 
         data = {

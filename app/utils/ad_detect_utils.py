@@ -13,7 +13,7 @@ def ad_detect(msg, ctx):
     params = {
         "nickname": msg.nickname,
         "text": msg.text,
-        "score_threshold": get_threshold(ctx, msg.gameId),
+        "score_threshold": get_threshold(ctx, msg.app_id),
     }
     res = False
     try:
@@ -28,11 +28,11 @@ def ad_detect(msg, ctx):
         return res
 
 
-def get_threshold(ctx, game_id):
-    cache_game_channel = ctx.config.get("GAME_CHANNEL", {})
-    k = "GC_{}_all".format(game_id)
-    if cache_game_channel.get(k):
-        threshold = cache_game_channel[k].get("model_threshold", "")
+def get_threshold(ctx, app_id):
+    cache_app_channel = ctx.config.get("APP_CHANNEL", {})
+    k = "AC_{}_all".format(app_id)
+    if cache_app_channel.get(k):
+        threshold = cache_app_channel[k].get("model_threshold", "")
         if threshold != "":
-            return cache_game_channel[k]["model_threshold"]
+            return cache_app_channel[k]["model_threshold"]
     return 0.8

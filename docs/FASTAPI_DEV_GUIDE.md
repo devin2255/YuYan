@@ -9,7 +9,7 @@
 ### 1.1 业务范围
 - 文本反垃圾（聊天消息内容风控）
 - 图片反垃圾
-- 名单/渠道/游戏配置管理
+- 名单/渠道/应用配置管理
 - 自研规则/模型（名单、广告模型、LLM）
 - 本地缓存 + Redis 缓存联动
 - 定时任务刷新缓存
@@ -120,7 +120,7 @@ app/
 ```mermaid
 flowchart LR
   C[Client] -->|HTTP| API[FastAPI App]
-  API --> R[API Routers /dun]
+  API --> R[API Routers /]
   R --> S[Service Layer]
   S --> Cache[Redis Cache]
   S --> DB[(MySQL)]
@@ -145,8 +145,8 @@ sequenceDiagram
   participant LLM as LLMService
   participant K as KafkaLogs
 
-  C->>A: POST /dun/chatmsg.anti (accessKey,data)
-  A->>R: load ACCESS_KEY/ALL_GAMES/CACHE_DATA
+  C->>A: POST /moderation/text (access_key,data)
+  A->>R: load ACCESS_KEY/ALL_APPS/CACHE_DATA
   A->>L: predict language (optional)
   A->>M: AC filter + AI/LLM rules
   M->>AD: ad model (optional)
@@ -184,13 +184,12 @@ flowchart LR
 
 所有表名由 `Base.camel2line()` 自动转换：
 
-### 6.1 `game`
+### 6.1 `app`
 字段：
 - `id` (PK, int, auto)
-- `game_id` (string)
+- `app_id` (string)
 - `name` (string)
 - `access_key` (string)
-- `dun_secret_id` / `dun_secret_key`：新架构不再使用，可不迁移或保留为历史字段
 - `create_time`, `update_time`, `delete_time`, `create_by`, `update_by`, `delete_by`
 
 ### 6.2 `channel`
@@ -219,11 +218,11 @@ flowchart LR
 - `memo` (string)
 - 通用审计字段
 
-### 6.5 `list_game_channel`
+### 6.5 `list_app_channel`
 字段（联合主键）：
 - `list_no`
-- `game_id`
-- `channel_no`
+- `app_id`
+- `channel_id`
 - 通用审计字段
 
 ### 6.6 其它表
@@ -231,9 +230,9 @@ flowchart LR
 |---|---|---|
 | `language` | 语种配置 | `id`, `name`, `abbrev` |
 | `risk_type` | 风险类型 | `id`, `no`, `desc`, `abbrev` |
-| `ai_switch` | AI 开关 | `game_id`, `switch` |
-| `ac_switch` | AC 自动机开关 | `game_id`, `channel` |
-| `model_threshold` | 广告模型阈值 | `game_id`, `threshold` |
+| `ai_switch` | AI 开关 | `app_id`, `switch` |
+| `ac_switch` | AC 自动机开关 | `app_id`, `channel` |
+| `model_threshold` | 广告模型阈值 | `app_id`, `threshold` |
 > 说明：`swich_shumei`、`switch_sdk_check`、`tencent_*`、`tanwan_*` 在新架构中可不迁移。
 
 > 注意：所有表都含通用的 `create_time/update_time/delete_time` 软删除字段。
@@ -243,18 +242,18 @@ flowchart LR
 ## 7. Redis 结构与缓存机制
 
 ### 7.1 Redis Key 约定
-- `all_games`：所有游戏 ID 集合
-- `access_key`：`game_id -> access_key`
-- `GC_{gameId}_{channel}`：game+channel 的名单/开关集合
+- `all_apps`：所有应用 ID 集合
+- `access_key`：`app_id -> access_key`
+- `AC_{app_id}_{channel}`：app+channel 的名单/开关集合
   - value 中包含 `ai_switch`, `ac_switch`, `model_threshold`, 名单列表等
-- `waiting_update_gc_list`：待更新 `GC_*` 的 zset
+- `waiting_update_app_channel_list`：待更新 `AC_*` 的 zset
 - `waiting_update_list_detail`：待更新名单详情的 zset
 - `chat_sentinel_account_id` / `chat_sentinel_ip`：聊天哨兵策略
 
 ### 7.2 本地缓存字段
 启动时及定时任务会写入：
-- `ALL_GAMES`
-- `GAME_CHANNEL`
+- `ALL_APPS`
+- `APP_CHANNEL`
 - `CACHE_DATA`
 - `ACCESS_KEY`
 - `CHAT_SENTINEL`
@@ -270,22 +269,22 @@ FastAPI 建议在应用启动时挂载 `APScheduler`，并在 `startup`/`shutdow
 ## 8. API 设计（路径与请求结构）
 
 ### 8.1 路由前缀
-当前 Flask 蓝图统一前缀：`/dun`
+当前 FastAPI 路由前缀：无（已移除 `/dun`）
 
 ### 8.2 文本反垃圾
-- `GET/POST /dun/chatmsg.anti`
+- `POST /moderation/text`
 - 必填参数（来自 `validators/forms.py`）：
-  - `accessKey`：身份校验 key
-  - `ugcSource`：UGC 来源
+  - `access_key`：身份校验 key
+  - `ugc_source`：UGC 来源
   - `data`：字符串形式 JSON
-    - 必填字段：`timestamp`, `tokenId`, `nickname`, `text`, `serverId`, `accountId`,
-      `gameId`, `roleId`, `vipLevel`, `level`, `ip`, `channel`
-    - 可选字段：`relationship`, `targetId`, `organizationId`, `teamId`, `sceneId` 等
-  - `accessKey` 校验逻辑：优先 Redis `ACCESS_KEY`，若不存在则匹配内置白名单映射
+    - 必填字段：`timestamp`, `token_id`, `nickname`, `text`, `server_id`, `account_id`,
+      `app_id`, `role_id`, `vip_level`, `level`, `ip`, `channel`
+    - 可选字段：`relationship`, `target_id`, `organization_id`, `team_id`, `scene_id` 等
+  - `access_key` 校验逻辑：优先 Redis `ACCESS_KEY`，若不存在则匹配内置白名单映射
   - 服务端补充/改写字段：
-    - `requestId` 与 `btId` 自动生成
-    - `channel` 会被拼接为 `{gameId}_{channel}`
-    - `tokenId` 默认 `{gameId}_{serverId}_{roleId}`，若存在 `accountId` 则使用 `accountId`
+    - `request_id` 与 `bt_id` 自动生成
+    - `channel` 会被拼接为 `{app_id}_{channel}`
+    - `token_id` 默认 `{app_id}_{server_id}_{role_id}`，若存在 `account_id` 则使用 `account_id`
 
 响应结构（示例字段）：
 ```
@@ -302,86 +301,85 @@ FastAPI 建议在应用启动时挂载 `APScheduler`，并在 `startup`/`shutdow
 ```
 
 ### 8.3 图片反垃圾
-- `GET/POST /dun/imgfilter.anti`
-- `accessKey` + `data`（字符串 JSON）
-  - 必填字段：`timestamp`, `img`, `serverId`, `accountId`, `gameId`, `roleId`,
-    `vipLevel`, `level`, `ip`, `channel`, `targetId`, `organizationId`, `teamId`, `sceneId`
+- `POST /moderation/images`
+- `access_key` + `data`（字符串 JSON）
+  - 必填字段：`timestamp`, `img`, `server_id`, `account_id`, `app_id`, `role_id`,
+    `vip_level`, `level`, `ip`, `channel`, `target_id`, `organization_id`, `team_id`, `scene_id`
 > 新架构不接入数美，图片风控需改为自研模型或临时返回 PASS（由业务确认）。
 
-### 8.4 游戏/渠道配置
-- 游戏 `game`
-  - `GET /dun/game/<game_id>`
-  - `GET /dun/game`
-  - `POST /dun/game`
-  - `PUT /dun/game/<game_id>`
-  - `DELETE /dun/game/<game_id>`
+### 8.4 应用/渠道配置
+- 应用 `app`
+  - `GET /apps/<app_id>`
+  - `GET /apps`
+  - `POST /apps`
+  - `PUT /apps/<app_id>`
+  - `DELETE /apps/<app_id>`
 - 渠道 `channel`
-  - `GET /dun/channel/<cno>`
-  - `GET /dun/channel`
-  - `POST /dun/channel`
-  - `PUT /dun/channel/<cno>`
-  - `DELETE /dun/channel/<cno>`
+  - `GET /channels/<cno>`
+  - `GET /channels`
+  - `POST /channels`
+  - `PUT /channels/<cno>`
+  - `DELETE /channels/<cno>`
 
 ### 8.5 名单/详情
-- `GET /dun/name_list/<lid>`
-- `GET /dun/name_list`
-- `POST /dun/name_list`
-- `PUT /dun/name_list/<lid>`
-- `DELETE /dun/name_list/<lid>`
-- `POST /dun/name_list/swich/<lid>`
+- `GET /name-lists/<lid>`
+- `GET /name-lists`
+- `POST /name-lists`
+- `PUT /name-lists/<lid>`
+- `DELETE /name-lists/<lid>`
+- `PATCH /name-lists/<lid>/status`
 
-- `GET /dun/list_detail/<did>`
-- `GET /dun/list_detail/search/<text>`
-- `GET /dun/list_detail`
-- `POST /dun/list_detail`
-- `POST /dun/list_detail/batch`
-- `PUT /dun/list_detail/<did>`
-- `DELETE /dun/list_detail/del_text`
-- `DELETE /dun/list_detail/<did>`
-- `DELETE /dun/list_detail/batch`
+- `GET /list-details/<did>`
+- `GET /list-details/search?text=<text>`
+- `GET /list-details`
+- `POST /list-details`
+- `POST /list-details/batch`
+- `PUT /list-details/<did>`
+- `DELETE /list-details/by-text`
+- `DELETE /list-details/<did>`
+- `DELETE /list-details/batch`
 
 ### 8.6 风险类型/语种
-- `GET /dun/risk_type`
-- `POST /dun/risk_type`
-- `GET /dun/language/<lid>`
-- `GET /dun/language`
-- `POST /dun/language`
-- `PUT /dun/language/<language_id>`
-- `DELETE /dun/language/<language_id>`
+- `GET /risk-types`
+- `POST /risk-types`
+- `GET /languages/<lid>`
+- `GET /languages`
+- `POST /languages`
+- `PUT /languages/<language_id>`
+- `DELETE /languages/<language_id>`
 
 ### 8.7 开关与阈值
-- `GET/POST/PUT/DELETE /dun/ai_switch`
-- `GET/POST/PUT/DELETE /dun/ac_switch`
-- `GET/POST/PUT/DELETE /dun/model_threshold`
+- `GET/POST/PUT/DELETE /ai-switches`
+- `GET/POST/PUT/DELETE /ac-switches`
+- `GET/POST/PUT/DELETE /model-thresholds`
 
 ### 8.8 黑名单 IP
-- `GET /dun/black_client_ip`
-- `POST /dun/black_client_ip`
-- `DELETE /dun/black_client_ip/delete`
+- `GET /blacklisted-ips`
+- `POST /blacklisted-ips`
+- `DELETE /blacklisted-ips/{ip}`
 
 ### 8.9 缓存/管理接口（base）
 位于 `app/api/v1/base.py`，主要用于调试/缓存刷新：
-- `GET /dun/base/local_cache_games`
-- `GET /dun/base/local_cache_gc`
-- `GET /dun/base/local_cache_data`
-- `GET /dun/base/update_cache`
-- `GET /dun/base/sql2redis`
-- `GET /dun/base/redis/update_local_games`
-- `GET /dun/base/redis/games`
-- `GET /dun/base/redis/update_local_gc`
-- `GET /dun/base/redis/waiting_update_list_detail`
-- `GET /dun/base/redis/waiting_update_gc_list`
-- `GET /dun/base/redis/game_channel`
-- `GET /dun/base/redis/update_local_detail`
-- `GET /dun/base/redis/list_detail`
-- `GET /dun/base/mysql/update_local_games`
-- `GET /dun/base/redis/waiting_update_gc_list/reset`
-- `GET /dun/base/redis/waiting_update_list_detail/reset`
-- `GET /dun/base/redis/chat_sentinel/account`
-- `GET /dun/base/redis/chat_sentinel/ip`
-- `GET /dun/base/redis/dun_secret`
-- `GET /dun/base/redis/chat_sentinel/ip/reset?rule=xxx`
-- `GET /dun/base/redis/chat_sentinel/account/reset?rule=xxx`
+- `GET /cache/apps`
+- `GET /cache/app-channels`
+- `GET /cache/list-data`
+- `POST /cache/refresh`
+- `POST /cache/redis/import`
+- `POST /cache/apps/refresh-from-redis`
+- `GET /cache/redis/apps`
+- `POST /cache/app-channels/refresh-from-redis`
+- `GET /cache/redis/pending-list-details`
+- `GET /cache/redis/pending-app-channels`
+- `GET /cache/redis/app-channels`
+- `POST /cache/list-data/refresh-from-redis`
+- `GET /cache/redis/list-data`
+- `POST /cache/apps/refresh-from-db`
+- `POST /cache/redis/pending-app-channels/reset`
+- `POST /cache/redis/pending-list-details/reset`
+- `GET /cache/redis/chat-sentinel/accounts`
+- `GET /cache/redis/chat-sentinel/ips`
+- `POST /cache/redis/chat-sentinel/ips/reset?rule=xxx`
+- `POST /cache/redis/chat-sentinel/accounts/reset?rule=xxx`
 
 ### 8.10 错误响应格式
 `APIException` 返回 JSON：
@@ -399,9 +397,9 @@ HTTP 状态码与 `code` 不是同一概念：例如 `ParameterException` 的 HT
 ## 9. 文本反垃圾核心流程（必须保持一致）
 
 1. 解析 `data` JSON（字符串形式）
-2. 补齐字段（如 `tokenId`、`requestId`、`btId`，并修正 `channel` 前缀）
-3. 某些游戏（`2013101`, `2013001`）会拉取历史聊天（`CHAT_LOG_REDIS_CLIENT`）
-4. 校验 `gameId` 是否存在于缓存 `ALL_GAMES`
+2. 补齐字段（如 `token_id`、`request_id`、`bt_id`，并修正 `channel` 前缀）
+3. 某些应用（`2013101`, `2013001`）会拉取历史聊天（`CHAT_LOG_REDIS_CLIENT`）
+4. 校验 `app_id` 是否存在于缓存 `ALL_APPS`
 5. 语种识别（可开关 `LANGUAGE_SWITCH`）
 6. 本地名单过滤（AC 自动机）
    - 白名单优先 PASS
@@ -424,7 +422,7 @@ HTTP 状态码与 `code` 不是同一概念：例如 `ParameterException` 的 HT
 
 ### 10.3 LLM 判别（账号买卖）
 - `llm_utils.get_llm_ans()`
-- 仅对特定 gameId 生效：`2013101`, `2013001`
+- 仅对特定 app_id 生效：`2013101`, `2013001`
 
 ---
 

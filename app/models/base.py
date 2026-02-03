@@ -7,7 +7,7 @@ from typing import Dict
 from sqlalchemy import Column, DateTime, String
 from sqlalchemy.orm import declared_attr
 
-from yuyan.app.core.db import Base
+from app.core.db import Base
 
 
 def camel2line(camel: str) -> str:

@@ -4,26 +4,26 @@ import time
 
 from fastapi import APIRouter, Depends, Request
 
-from yuyan.app.api.deps import get_ctx, get_db
-from yuyan.app.core.exceptions import NotFound
-from yuyan.app.utils.cache_sql_data import sql_data_to_redis
-from yuyan.app.services.cache import load_cache_from_redis, load_chat_sentinel, update_cache_data
-from yuyan.app.services.response import success_response
+from app.api.deps import get_ctx, get_db
+from app.core.exceptions import NotFound
+from app.utils.cache_sql_data import sql_data_to_redis
+from app.services.cache import load_cache_from_redis, load_chat_sentinel, update_cache_data
+from app.services.response import success_response
 
-router = APIRouter(prefix="/base")
-
-
-@router.get("/local_cache_games")
-def local_cache_games(ctx=Depends(get_ctx)):
-    return ctx.config.get("ALL_GAMES", [])
+router = APIRouter(prefix="/cache")
 
 
-@router.get("/local_cache_gc")
-def local_cache_gc(ctx=Depends(get_ctx)):
-    return ctx.config.get("GAME_CHANNEL", {})
+@router.get("/apps")
+def local_cache_apps(ctx=Depends(get_ctx)):
+    return ctx.config.get("ALL_APPS", [])
 
 
-@router.get("/local_cache_data")
+@router.get("/app-channels")
+def local_cache_app_channel(ctx=Depends(get_ctx)):
+    return ctx.config.get("APP_CHANNEL", {})
+
+
+@router.get("/list-data")
 def local_cache_data(ctx=Depends(get_ctx)):
     cache_data = ctx.config.get("CACHE_DATA", {})
     safe_data = {}
@@ -35,13 +35,13 @@ def local_cache_data(ctx=Depends(get_ctx)):
     return safe_data
 
 
-@router.get("/update_cache")
+@router.post("/refresh")
 def update_cache(ctx=Depends(get_ctx)):
     update_cache_data(ctx)
     return success_response(msg="ok")
 
 
-@router.get("/sql2redis")
+@router.post("/redis/import")
 def sql2redis(ctx=Depends(get_ctx)):
     redis_url = ctx.config.get("REDIS_URL")
     mysql_url = ctx.config.get("SQLALCHEMY_DATABASE_URI")
@@ -49,28 +49,28 @@ def sql2redis(ctx=Depends(get_ctx)):
     return success_response(msg="ok")
 
 
-@router.get("/redis/update_local_games")
-def update_local_games_from_redis(ctx=Depends(get_ctx)):
+@router.post("/apps/refresh-from-redis")
+def update_local_apps_from_redis(ctx=Depends(get_ctx)):
     redis_client = ctx.redis
-    ctx.config["ALL_GAMES"] = list(redis_client.smembers("all_games"))
+    ctx.config["ALL_APPS"] = list(redis_client.smembers("all_apps"))
     return success_response(msg="更新本地内存成功")
 
 
-@router.get("/redis/games")
-def get_games_from_redis(ctx=Depends(get_ctx)):
+@router.get("/redis/apps")
+def get_apps_from_redis(ctx=Depends(get_ctx)):
     redis_client = ctx.redis
-    return list(redis_client.smembers("all_games"))
+    return list(redis_client.smembers("all_apps"))
 
 
-@router.get("/redis/update_local_gc")
-def update_local_gc_from_redis(ctx=Depends(get_ctx)):
+@router.post("/app-channels/refresh-from-redis")
+def update_local_app_channel_from_redis(ctx=Depends(get_ctx)):
     redis_client = ctx.redis
-    _, local_gc, _, _, _ = load_cache_from_redis(redis_client)
-    ctx.config["GAME_CHANNEL"] = local_gc
+    _, local_app_channel, _, _ = load_cache_from_redis(redis_client)
+    ctx.config["APP_CHANNEL"] = local_app_channel
     return success_response(msg="更新本地内存成功")
 
 
-@router.get("/redis/waiting_update_list_detail")
+@router.get("/redis/pending-list-details")
 def get_waiting_update_list_detail(ctx=Depends(get_ctx)):
     redis_client = ctx.redis
     list_detail = []
@@ -82,42 +82,42 @@ def get_waiting_update_list_detail(ctx=Depends(get_ctx)):
     return list_detail
 
 
-@router.get("/redis/waiting_update_gc_list")
-def get_waiting_update_gc_list(ctx=Depends(get_ctx)):
+@router.get("/redis/pending-app-channels")
+def get_waiting_update_app_channel_list(ctx=Depends(get_ctx)):
     redis_client = ctx.redis
-    gc_list = []
+    app_channel_list = []
     t = int(time.time())
-    num_gc = redis_client.zcount("waiting_update_gc_list", min=t - 500, max=t)
-    if num_gc:
-        for i in redis_client.zrevrangebyscore("waiting_update_gc_list", min=t - 500, max=t):
-            gc_list.append(i)
-    return gc_list
+    num_app_channel = redis_client.zcount("waiting_update_app_channel_list", min=t - 500, max=t)
+    if num_app_channel:
+        for i in redis_client.zrevrangebyscore("waiting_update_app_channel_list", min=t - 500, max=t):
+            app_channel_list.append(i)
+    return app_channel_list
 
 
-@router.get("/redis/game_channel")
-def get_gc_from_redis(ctx=Depends(get_ctx)):
+@router.get("/redis/app-channels")
+def get_app_channel_from_redis(ctx=Depends(get_ctx)):
     redis_client = ctx.redis
-    local_gc_listname = {}
+    local_app_channel_listname = {}
     for i in redis_client.scan_iter():
-        if i[:3] == "GC_":
+        if i[:3] == "AC_":
             v = redis_client.hgetall(i)
             for k, ve in v.items():
                 if k == "swich_shumei":
                     v[k] = ve
                 else:
                     v[k] = json.loads(ve) if isinstance(ve, str) else ve
-            local_gc_listname[i] = v
-    return local_gc_listname
+            local_app_channel_listname[i] = v
+    return local_app_channel_listname
 
 
-@router.get("/redis/update_local_detail")
+@router.post("/list-data/refresh-from-redis")
 def update_local_detail_from_redis(ctx=Depends(get_ctx)):
     redis_client = ctx.redis
     local_list_data = {}
     for i in redis_client.scan_iter():
-        if i in ["waiting_update_list_detail", "waiting_update_gc_list", "all_games"]:
+        if i in ["waiting_update_list_detail", "waiting_update_app_channel_list", "all_apps"]:
             continue
-        if i[:3] == "GC_" or i[:13] == "chat_sentinel":
+        if i[:3] == "AC_" or i[:13] == "chat_sentinel":
             continue
         v = redis_client.hgetall(i)
         raw = v.get("data")
@@ -134,14 +134,14 @@ def update_local_detail_from_redis(ctx=Depends(get_ctx)):
     return success_response(msg="更新本地内存成功")
 
 
-@router.get("/redis/list_detail")
+@router.get("/redis/list-data")
 def get_redis_list_detail(ctx=Depends(get_ctx)):
     redis_client = ctx.redis
     local_list_data = {}
     for i in redis_client.scan_iter():
-        if i in ["waiting_update_list_detail", "waiting_update_gc_list", "all_games"]:
+        if i in ["waiting_update_list_detail", "waiting_update_app_channel_list", "all_apps"]:
             continue
-        if i[:3] == "GC_" or i[:13] == "chat_sentinel":
+        if i[:3] == "AC_" or i[:13] == "chat_sentinel":
             continue
         v = redis_client.hgetall(i)
         v["data"] = "ACTree" if v.get("data") else ""
@@ -149,57 +149,51 @@ def get_redis_list_detail(ctx=Depends(get_ctx)):
     return local_list_data
 
 
-@router.get("/mysql/update_local_games")
-def update_local_games_from_mysql(db=Depends(get_db), ctx=Depends(get_ctx)):
-    from yuyan.app.services import game_service
+@router.post("/apps/refresh-from-db")
+def update_local_apps_from_mysql(db=Depends(get_db), ctx=Depends(get_ctx)):
+    from app.services import app_service
 
-    games = game_service.get_games(db)
-    ctx.config["ALL_GAMES"] = [i.game_id for i in games]
+    apps = app_service.get_apps(db)
+    ctx.config["ALL_APPS"] = [i.app_id for i in apps]
     return success_response(msg="更新本地内存成功")
 
 
-@router.get("/redis/waiting_update_gc_list/reset")
-def reset_waiting_update_gc_list(ctx=Depends(get_ctx)):
+@router.post("/redis/pending-app-channels/reset")
+def reset_waiting_update_app_channel_list(ctx=Depends(get_ctx)):
     redis_client = ctx.redis
     for i in redis_client.scan_iter():
-        if i[:3] == "GC_":
+        if i[:3] == "AC_":
             v = redis_client.hgetall(i)
             for k in v.keys():
-                redis_client.zadd("waiting_update_gc_list", {f"{i}|{k}": int(time.time())})
+                redis_client.zadd("waiting_update_app_channel_list", {f"{i}|{k}": int(time.time())})
     return success_response(msg="重置成功")
 
 
-@router.get("/redis/waiting_update_list_detail/reset")
+@router.post("/redis/pending-list-details/reset")
 def reset_waiting_update_list_detail(ctx=Depends(get_ctx)):
     redis_client = ctx.redis
     for i in redis_client.scan_iter():
-        if i in ["waiting_update_list_detail", "waiting_update_gc_list", "all_games"]:
+        if i in ["waiting_update_list_detail", "waiting_update_app_channel_list", "all_apps"]:
             continue
-        if i[:3] == "GC_" or i[:13] == "chat_sentinel":
+        if i[:3] == "AC_" or i[:13] == "chat_sentinel":
             continue
         redis_client.zadd("waiting_update_list_detail", {i: int(time.time())})
     return success_response(msg="重置成功")
 
 
-@router.get("/redis/chat_sentinel/account")
+@router.get("/redis/chat-sentinel/accounts")
 def get_chat_sentinel_account(ctx=Depends(get_ctx)):
     redis_client = ctx.redis
     return redis_client.hgetall("chat_sentinel_account_id")
 
 
-@router.get("/redis/chat_sentinel/ip")
+@router.get("/redis/chat-sentinel/ips")
 def get_chat_sentinel_ip(ctx=Depends(get_ctx)):
     redis_client = ctx.redis
     return redis_client.hgetall("chat_sentinel_ip")
 
 
-@router.get("/redis/dun_secret")
-def get_dun_secret(ctx=Depends(get_ctx)):
-    redis_client = ctx.redis
-    return redis_client.hgetall("dun_secret")
-
-
-@router.get("/redis/chat_sentinel/ip/reset")
+@router.post("/redis/chat-sentinel/ips/reset")
 def reset_chat_sentinel_ip(request: Request, ctx=Depends(get_ctx)):
     redis_client = ctx.redis
     rule = request.query_params.get("rule")
@@ -213,7 +207,7 @@ def reset_chat_sentinel_ip(request: Request, ctx=Depends(get_ctx)):
     return success_response(msg="重置成功")
 
 
-@router.get("/redis/chat_sentinel/account/reset")
+@router.post("/redis/chat-sentinel/accounts/reset")
 def reset_chat_sentinel_account(request: Request, ctx=Depends(get_ctx)):
     redis_client = ctx.redis
     rule = request.query_params.get("rule")

@@ -4,11 +4,11 @@ from datetime import datetime
 
 from sqlalchemy.orm import Session
 
-from yuyan.app.core.exceptions import NotFound, ParameterException
-from yuyan.app.models.list_detail import ListDetail
-from yuyan.app.utils.ahocorasick_utils import build_actree
-from yuyan.app.utils.enums import ListMatchTypeEnum
-from yuyan.app.utils.tokenizer import AllTokenizer
+from app.core.exceptions import NotFound, ParameterException
+from app.models.list_detail import ListDetail
+from app.utils.ahocorasick_utils import build_actree
+from app.utils.enums import ListMatchTypeEnum
+from app.utils.tokenizer import AllTokenizer
 
 tokenizer = AllTokenizer()
 

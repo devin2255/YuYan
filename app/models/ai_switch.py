@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Boolean
 
-from yuyan.app.models.base import BaseModel
+from app.models.base import BaseModel
 
 
 class AISwitch(BaseModel):
@@ -8,4 +8,4 @@ class AISwitch(BaseModel):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     switch = Column(Boolean, nullable=False, default=True)
-    game_id = Column(String(100), nullable=False, index=True)
+    app_id = Column(String(100), nullable=False, index=True)

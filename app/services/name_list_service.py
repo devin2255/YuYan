@@ -4,11 +4,11 @@ import uuid
 
 from sqlalchemy.orm import Session
 
-from yuyan.app.core.exceptions import NotFound, ParameterException
-from yuyan.app.models.list_detail import ListDetail
-from yuyan.app.models.list_game_channel import ListGameChannel
-from yuyan.app.models.name_list import NameList
-from yuyan.app.utils.enums import ListStatusEnum
+from app.core.exceptions import NotFound, ParameterException
+from app.models.list_detail import ListDetail
+from app.models.list_app_channel import ListAppChannel
+from app.models.name_list import NameList
+from app.utils.enums import ListStatusEnum
 
 
 def get_name_list(db: Session, lid: str):
@@ -39,12 +39,12 @@ def get_name_lists(db: Session):
     return items
 
 
-def create_name_list(db: Session, ctx, form, games, channels):
+def create_name_list(db: Session, ctx, form, apps, channels):
     exist = db.query(NameList).filter(NameList.name == form.name.data, NameList.delete_time.is_(None)).first()
     if exist:
         raise ParameterException(message="名单已存在")
-    if not games or not channels or len(games) > 5 or len(channels) > 5:
-        raise ParameterException(message="生效游戏不能超过5个, 生效渠道不能超过5个")
+    if not apps or not channels or len(apps) > 5 or len(channels) > 5:
+        raise ParameterException(message="生效应用不能超过5个, 生效渠道不能超过5个")
 
     name_list = NameList(
         name=form.name.data,
@@ -62,16 +62,16 @@ def create_name_list(db: Session, ctx, form, games, channels):
     db.add(name_list)
     db.flush()
 
-    _add_relationships(db, ctx, name_list, games, channels)
+    _add_relationships(db, ctx, name_list, apps, channels)
     _add_detail_redis(ctx, name_list)
     db.commit()
     return True
 
 
-def update_name_list(db: Session, ctx, lid, form, games, channels):
+def update_name_list(db: Session, ctx, lid, form, apps, channels):
     name_list = get_name_list(db, lid)
-    if not games or not channels or len(games) > 5 or len(channels) > 5:
-        raise ParameterException(message="生效游戏不能超过5个, 生效渠道不能超过5个")
+    if not apps or not channels or len(apps) > 5 or len(channels) > 5:
+        raise ParameterException(message="生效应用不能超过5个, 生效渠道不能超过5个")
     name_list.name = form.name.data
     name_list._type = form.type.data
     name_list._match_rule = form.match_rule.data
@@ -84,7 +84,7 @@ def update_name_list(db: Session, ctx, lid, form, games, channels):
     db.add(name_list)
 
     _remove_relationships(db, ctx, name_list)
-    _add_relationships(db, ctx, name_list, games, channels)
+    _add_relationships(db, ctx, name_list, apps, channels)
     _update_detail_redis(ctx, name_list, update_data=True)
     db.commit()
     return True
@@ -112,37 +112,37 @@ def switch_name_list(db: Session, ctx, lid, form):
     return True
 
 
-def _add_relationships(db: Session, ctx, name_list, games, channels):
-    for g in games:
+def _add_relationships(db: Session, ctx, name_list, apps, channels):
+    for g in apps:
         for c in channels:
-            rela = ListGameChannel(list_no=name_list.no, game_id=g.game_id, channel_no=c.no)
+            rela = ListAppChannel(list_no=name_list.no, app_id=g.app_id, channel_id=c.id)
             db.add(rela)
-            _update_gc_redis(ctx, name_list, g.game_id, c.no, add=True)
+            _update_app_channel_redis(ctx, name_list, g.app_id, c.id, add=True)
 
 
 def _remove_relationships(db: Session, ctx, name_list):
-    rels = db.query(ListGameChannel).filter(ListGameChannel.list_no == name_list.no).all()
+    rels = db.query(ListAppChannel).filter(ListAppChannel.list_no == name_list.no).all()
     for r in rels:
-        _update_gc_redis(ctx, name_list, r.game_id, r.channel_no, add=False)
+        _update_app_channel_redis(ctx, name_list, r.app_id, r.channel_id, add=False)
         db.delete(r)
 
 
-def _update_gc_redis(ctx, name_list, game_id, channel_no, add=True):
+def _update_app_channel_redis(ctx, name_list, app_id, channel_id, add=True):
     redis_client = ctx.redis
-    key = f"GC_{game_id}_{channel_no}"
+    key = f"AC_{app_id}_{channel_id}"
     list_type = str(name_list._type)
     if redis_client.hexists(key, list_type):
-        gc_data = json.loads(redis_client.hget(key, list_type))
+        app_channel_data = json.loads(redis_client.hget(key, list_type))
     else:
-        gc_data = []
+        app_channel_data = []
     if add:
-        if name_list.no not in gc_data:
-            gc_data.append(name_list.no)
+        if name_list.no not in app_channel_data:
+            app_channel_data.append(name_list.no)
     else:
-        if name_list.no in gc_data:
-            gc_data.remove(name_list.no)
-    redis_client.hset(key, list_type, json.dumps(list(set(gc_data))))
-    redis_client.zadd("waiting_update_gc_list", {f"{key}|{list_type}": int(time.time())})
+        if name_list.no in app_channel_data:
+            app_channel_data.remove(name_list.no)
+    redis_client.hset(key, list_type, json.dumps(list(set(app_channel_data))))
+    redis_client.zadd("waiting_update_app_channel_list", {f"{key}|{list_type}": int(time.time())})
 
 
 def _add_detail_redis(ctx, name_list):

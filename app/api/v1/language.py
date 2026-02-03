@@ -1,15 +1,15 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends
 
 from sqlalchemy.orm import Session
 
-from yuyan.app.api.deps import get_db
-from yuyan.app.schemas.language import CreateOrUpdateLanguage, DeleteLanguage
-from yuyan.app.services import language_service
-from yuyan.app.services.response import success_response
-from yuyan.app.services.serializer import to_dict
-from yuyan.app.services.validators import FormProxy, parse_request_payload
+from app.api.deps import get_db
+from app.schemas.language import CreateOrUpdateLanguage, DeleteLanguage
+from app.services import language_service
+from app.services.response import success_response
+from app.services.serializer import to_dict
+from app.services.validators import FormProxy
 
-router = APIRouter(prefix="/language")
+router = APIRouter(prefix="/languages")
 
 
 @router.get("/{lid}")
@@ -25,27 +25,24 @@ def get_languages(db: Session = Depends(get_db)):
 
 
 @router.post("")
-async def create_language(request: Request, db: Session = Depends(get_db)):
-    payload = await parse_request_payload(request)
-    form_data = CreateOrUpdateLanguage(**payload)
-    form = FormProxy(**form_data.dict())
+async def create_language(payload: CreateOrUpdateLanguage, db: Session = Depends(get_db)):
+    form_data = payload
+    form = FormProxy(**form_data.model_dump())
     language_service.create_language(db, form)
     return success_response(msg="新建语种成功")
 
 
 @router.put("/{language_id}")
-async def update_language(language_id: str, request: Request, db: Session = Depends(get_db)):
-    payload = await parse_request_payload(request)
-    form_data = CreateOrUpdateLanguage(**payload)
-    form = FormProxy(**form_data.dict())
+async def update_language(language_id: str, payload: CreateOrUpdateLanguage, db: Session = Depends(get_db)):
+    form_data = payload
+    form = FormProxy(**form_data.model_dump())
     language_service.update_language(db, int(language_id), form)
     return success_response(msg="更新语种成功")
 
 
 @router.delete("/{language_id}")
-async def delete_language(language_id: str, request: Request, db: Session = Depends(get_db)):
-    payload = await parse_request_payload(request)
-    form_data = DeleteLanguage(**payload)
-    form = FormProxy(**form_data.dict())
+async def delete_language(language_id: str, payload: DeleteLanguage, db: Session = Depends(get_db)):
+    form_data = payload
+    form = FormProxy(**form_data.model_dump())
     language_service.delete_language(db, int(language_id), form)
     return success_response(msg="删除语种成功")

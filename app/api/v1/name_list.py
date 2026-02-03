@@ -1,18 +1,18 @@
 import json
 from typing import List
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends
 
 from sqlalchemy.orm import Session
 
-from yuyan.app.api.deps import get_ctx, get_db
-from yuyan.app.schemas.name_list import CreateOrUpdateNameList, SwitchNameList
-from yuyan.app.services import channel_service, game_service, name_list_service
-from yuyan.app.services.response import success_response
-from yuyan.app.services.serializer import to_dict
-from yuyan.app.services.validators import FormProxy, parse_request_payload
+from app.api.deps import get_ctx, get_db
+from app.schemas.name_list import CreateOrUpdateNameList, SwitchNameList
+from app.services import channel_service, app_service, name_list_service
+from app.services.response import success_response
+from app.services.serializer import to_dict
+from app.services.validators import FormProxy
 
-router = APIRouter(prefix="/name_list")
+router = APIRouter(prefix="/name-lists")
 
 
 def normalize_list(value) -> List[str]:
@@ -28,23 +28,23 @@ def normalize_list(value) -> List[str]:
     return []
 
 
-def process_game_channel(db: Session, game_id, channel):
-    game_ids = normalize_list(game_id)
-    channel_nos = normalize_list(channel)
+def process_app_channel(db: Session, app_id, channel):
+    app_ids = normalize_list(app_id)
+    channel_ids = normalize_list(channel)
 
-    if len(game_ids) > 5 or len(channel_nos) > 5:
+    if len(app_ids) > 5 or len(channel_ids) > 5:
         return [], []
 
-    if game_ids:
-        games = [game_service.get_game(db, gid) for gid in game_ids]
+    if app_ids:
+        apps = [app_service.get_app(db, gid) for gid in app_ids]
     else:
-        games = [game_service.get_game(db, game_id)]
+        apps = [app_service.get_app(db, app_id)]
 
-    if channel_nos:
-        channels = [channel_service.get_channel(db, cno) for cno in channel_nos]
+    if channel_ids:
+        channels = [channel_service.get_channel(db, int(cid)) for cid in channel_ids]
     else:
-        channels = [channel_service.get_channel(db, channel)]
-    return games, channels
+        channels = [channel_service.get_channel(db, int(channel))]
+    return apps, channels
 
 
 @router.get("/{lid}")
@@ -60,22 +60,22 @@ def get_name_lists(db: Session = Depends(get_db)):
 
 
 @router.post("")
-async def create_name_list(request: Request, db: Session = Depends(get_db), ctx=Depends(get_ctx)):
-    payload = await parse_request_payload(request)
-    form_data = CreateOrUpdateNameList(**payload)
-    form = FormProxy(**form_data.dict())
-    games, channels = process_game_channel(db, form.game_id.data, form.channel.data)
-    name_list_service.create_name_list(db, ctx, form, games, channels)
+async def create_name_list(payload: CreateOrUpdateNameList, db: Session = Depends(get_db), ctx=Depends(get_ctx)):
+    form_data = payload
+    form = FormProxy(**form_data.model_dump())
+    apps, channels = process_app_channel(db, form.app_id.data, form.channel.data)
+    name_list_service.create_name_list(db, ctx, form, apps, channels)
     return success_response(msg="新建名单成功")
 
 
 @router.put("/{lid}")
-async def update_name_list(lid: str, request: Request, db: Session = Depends(get_db), ctx=Depends(get_ctx)):
-    payload = await parse_request_payload(request)
-    form_data = CreateOrUpdateNameList(**payload)
-    form = FormProxy(**form_data.dict())
-    games, channels = process_game_channel(db, form.game_id.data, form.channel.data)
-    name_list_service.update_name_list(db, ctx, lid, form, games, channels)
+async def update_name_list(
+    lid: str, payload: CreateOrUpdateNameList, db: Session = Depends(get_db), ctx=Depends(get_ctx)
+):
+    form_data = payload
+    form = FormProxy(**form_data.model_dump())
+    apps, channels = process_app_channel(db, form.app_id.data, form.channel.data)
+    name_list_service.update_name_list(db, ctx, lid, form, apps, channels)
     return success_response(msg="更新名单成功")
 
 
@@ -85,10 +85,9 @@ def delete_name_list(lid: str, db: Session = Depends(get_db), ctx=Depends(get_ct
     return success_response(msg="删除名单成功")
 
 
-@router.post("/swich/{lid}")
-async def switch_name_list(lid: str, request: Request, db: Session = Depends(get_db), ctx=Depends(get_ctx)):
-    payload = await parse_request_payload(request)
-    form_data = SwitchNameList(**payload)
-    form = FormProxy(**form_data.dict())
+@router.patch("/{lid}/status")
+async def switch_name_list(lid: str, payload: SwitchNameList, db: Session = Depends(get_db), ctx=Depends(get_ctx)):
+    form_data = payload
+    form = FormProxy(**form_data.model_dump())
     name_list_service.switch_name_list(db, ctx, lid, form)
     return success_response(msg="名单状态修改成功")

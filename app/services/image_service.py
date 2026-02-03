@@ -4,16 +4,16 @@ import json
 import uuid
 from typing import Any, Dict, Tuple
 
-from yuyan.app.utils.enums import ListRiskTypeEnum
+from app.utils.enums import ListRiskTypeEnum
 
 from .validators import IMAGE_REQUIRED_FIELDS, ensure_required_fields
 
 
 def process_image_data(raw_data: Dict[str, Any]) -> Dict[str, Any]:
-    if raw_data.get("tokenId") is None:
-        raw_data["tokenId"] = f"{raw_data.get('gameId')}_{raw_data.get('serverId')}_{raw_data.get('roleId')}"
-    raw_data.setdefault("requestId", str(uuid.uuid1()))
-    raw_data.setdefault("btId", str(uuid.uuid1()))
+    if raw_data.get("token_id") is None:
+        raw_data["token_id"] = f"{raw_data.get('app_id')}_{raw_data.get('server_id')}_{raw_data.get('role_id')}"
+    raw_data.setdefault("request_id", str(uuid.uuid1()))
+    raw_data.setdefault("bt_id", str(uuid.uuid1()))
     return raw_data
 
 
@@ -40,7 +40,7 @@ def handle_image_filter(raw_data: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[
         "riskLevel": "PASS",
         "detail": json.dumps(build_pass_detail(), ensure_ascii=False),
         "score": 0,
-        "requestId": data_params.get("requestId", ""),
+        "requestId": data_params.get("request_id", ""),
         "message": "成功",
         "extra": {},
     }

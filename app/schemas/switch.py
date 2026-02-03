@@ -3,7 +3,7 @@ from .common import APIModel
 
 class CreateAISwitch(APIModel):
     switch: str
-    game_id: str
+    app_id: str
     username: str
 
 
@@ -14,7 +14,7 @@ class UpdateAISwitch(APIModel):
 
 class CreateACSwitch(APIModel):
     switch: str
-    game_id: str
+    app_id: str
     channel: str
     username: str
 
@@ -26,7 +26,7 @@ class UpdateACSwitch(APIModel):
 
 class CreateThreshold(APIModel):
     threshold: float
-    game_id: str
+    app_id: str
     username: str
 
 

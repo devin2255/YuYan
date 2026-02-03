@@ -1,11 +1,17 @@
 from __future__ import annotations
 
 import json
+import sys
 import time
 import traceback
 import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
+
+# Allow running via "uvicorn app.main:app" from the repo root.
+_repo_parent = Path(__file__).resolve().parents[2]
+if _repo_parent.is_dir() and str(_repo_parent) not in sys.path:
+    sys.path.insert(0, str(_repo_parent))
 
 import redis
 import requests
@@ -13,15 +19,15 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from yuyan.app.api.v1 import router as v1_router
-from yuyan.app.core.config import load_settings
-from yuyan.app.core.context import AppContext
-from yuyan.app.core.db import Base, init_engine
-from yuyan.app.core.exceptions import APIException, ServerError
-from yuyan.app.core.logging import KafkaLog, setup_logging
-from yuyan.app.core.scheduler import create_scheduler
-from yuyan.app.services.cache import load_cache_from_redis, load_chat_sentinel
-from yuyan.app.utils.send_feishu import send_feishu_message
+from app.api.v1 import router as v1_router
+from app.core.config import load_settings
+from app.core.context import AppContext
+from app.core.db import Base, init_engine
+from app.core.exceptions import APIException, ServerError
+from app.core.logging import KafkaLog, setup_logging
+from app.core.scheduler import create_scheduler
+from app.services.cache import load_cache_from_redis, load_chat_sentinel
+from app.utils.send_feishu import send_feishu_message
 
 
 @asynccontextmanager
@@ -38,8 +44,13 @@ async def lifespan(app: FastAPI):
     kafka_logger = KafkaLog(settings_dict.get("KAFKA_LOG_DIR", "logs/kafka"))
     engine, SessionLocal = init_engine(settings_dict.get("SQLALCHEMY_DATABASE_URI"))
     # ensure models are registered
-    import yuyan.app.models  # noqa: F401
-    Base.metadata.create_all(bind=engine)
+    from app import models  # noqa: F401
+    auto_create = settings_dict.get("AUTO_CREATE_TABLES")
+    if auto_create is None:
+        env = str(settings_dict.get("ENVIRONMENT", "")).lower()
+        auto_create = env != "production"
+    if auto_create:
+        Base.metadata.create_all(bind=engine)
 
     ctx = AppContext(
         settings=settings,
@@ -62,12 +73,11 @@ async def lifespan(app: FastAPI):
         ctx.config["BLACK_CLIENT_IP"] = []
 
     # 初始化本地缓存
-    all_games, game_channel, cache_data, access_key, dun_secret = load_cache_from_redis(redis_client)
-    ctx.config["ALL_GAMES"] = all_games
-    ctx.config["GAME_CHANNEL"] = game_channel
+    all_apps, app_channel, cache_data, access_key = load_cache_from_redis(redis_client)
+    ctx.config["ALL_APPS"] = all_apps
+    ctx.config["APP_CHANNEL"] = app_channel
     ctx.config["CACHE_DATA"] = cache_data
     ctx.config["ACCESS_KEY"] = access_key
-    ctx.config["DUN_SECRET"] = dun_secret
     ctx.config["CHAT_SENTINEL"] = load_chat_sentinel(redis_client)
 
     app.state.ctx = ctx
@@ -162,7 +172,7 @@ def create_app() -> FastAPI:
         }
         return JSONResponse(status_code=500, content=payload)
 
-    app.include_router(v1_router, prefix="/dun")
+    app.include_router(v1_router)
     return app
 
 

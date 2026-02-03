@@ -12,8 +12,8 @@ class CreateOrUpdateNameList(APIModel):
     risk_type: int
     status: Optional[int] = 1
     language: Optional[str] = "all"
-    channel: Union[List[str], str]
-    game_id: Union[List[str], str]
+    channel: Union[List[int], int]
+    app_id: Union[List[str], str]
     username: str
 
 

@@ -1,15 +1,15 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends
 
 from sqlalchemy.orm import Session
 
-from yuyan.app.api.deps import get_db
-from yuyan.app.schemas.risk_type import CreateRiskType
-from yuyan.app.services import risk_type_service
-from yuyan.app.services.response import success_response
-from yuyan.app.services.serializer import to_dict
-from yuyan.app.services.validators import FormProxy, parse_request_payload
+from app.api.deps import get_db
+from app.schemas.risk_type import CreateRiskType
+from app.services import risk_type_service
+from app.services.response import success_response
+from app.services.serializer import to_dict
+from app.services.validators import FormProxy
 
-router = APIRouter(prefix="/risk_type")
+router = APIRouter(prefix="/risk-types")
 
 
 @router.get("")
@@ -19,9 +19,8 @@ def get_risk_types(db: Session = Depends(get_db)):
 
 
 @router.post("")
-async def create_risk_type(request: Request, db: Session = Depends(get_db)):
-    payload = await parse_request_payload(request)
-    form_data = CreateRiskType(**payload)
-    form = FormProxy(**form_data.dict())
+async def create_risk_type(payload: CreateRiskType, db: Session = Depends(get_db)):
+    form_data = payload
+    form = FormProxy(**form_data.model_dump())
     risk_type_service.create_risk_type(db, form)
     return success_response(msg="新建风险类型成功")

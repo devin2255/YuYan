@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 
-from yuyan.app.core.exceptions import NotFound, ParameterException
-from yuyan.app.models.language import Language
+from app.core.exceptions import NotFound, ParameterException
+from app.models.language import Language
 
 
 def get_language(db: Session, language_id: int):

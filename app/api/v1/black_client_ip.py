@@ -1,14 +1,14 @@
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends
 
-from yuyan.app.api.deps import get_ctx
-from yuyan.app.core.exceptions import ParameterException
-from yuyan.app.schemas.black_ip import BlackIP
-from yuyan.app.services.response import success_response
-from yuyan.app.services.validators import FormProxy, parse_request_payload
+from app.api.deps import get_ctx
+from app.core.exceptions import ParameterException
+from app.schemas.black_ip import BlackIP
+from app.services.response import success_response
+from app.services.validators import FormProxy
 
-router = APIRouter(prefix="/black_client_ip")
+router = APIRouter(prefix="/blacklisted-ips")
 
 
 @router.get("")
@@ -17,10 +17,9 @@ def get_black_ips(ctx=Depends(get_ctx)):
 
 
 @router.post("")
-async def create_client_ip(request: Request, ctx=Depends(get_ctx)):
-    payload = await parse_request_payload(request)
-    form_data = BlackIP(**payload)
-    form = FormProxy(**form_data.dict())
+async def create_client_ip(payload: BlackIP, ctx=Depends(get_ctx)):
+    form_data = payload
+    form = FormProxy(**form_data.model_dump())
     ip = form.ip.data
     ip_file = ctx.config.get("BLACK_CLIENT_IP_FILE", "app/config/black_client_ip.txt")
     if not Path(ip_file).exists():
@@ -37,12 +36,8 @@ async def create_client_ip(request: Request, ctx=Depends(get_ctx)):
     return success_response(msg="新增ip成功")
 
 
-@router.delete("/delete")
-async def delete_client_ip(request: Request, ctx=Depends(get_ctx)):
-    payload = await parse_request_payload(request)
-    form_data = BlackIP(**payload)
-    form = FormProxy(**form_data.dict())
-    ip = form.ip.data
+@router.delete("/{ip}")
+async def delete_client_ip(ip: str, ctx=Depends(get_ctx)):
     ip_file = ctx.config.get("BLACK_CLIENT_IP_FILE", "app/config/black_client_ip.txt")
     if not Path(ip_file).exists():
         Path(ip_file).parent.mkdir(parents=True, exist_ok=True)

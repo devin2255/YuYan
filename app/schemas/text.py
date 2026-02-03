@@ -4,6 +4,6 @@ from .common import APIModel
 
 
 class TextRequest(APIModel):
-    accessKey: str
-    ugcSource: str
+    access_key: str
+    ugc_source: str
     data: Any

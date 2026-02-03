@@ -5,9 +5,9 @@ from urllib.parse import urlparse
 import pymysql
 import redis
 
-from yuyan.app.utils.ahocorasick_utils import build_actree
-from yuyan.app.utils.enums import ListMatchTypeEnum
-from yuyan.app.utils.tokenizer import AllTokenizer
+from app.utils.ahocorasick_utils import build_actree
+from app.utils.enums import ListMatchTypeEnum
+from app.utils.tokenizer import AllTokenizer
 
 tokenizer = AllTokenizer()
 
@@ -37,43 +37,38 @@ class DataBaseHandle(object):
 
 
 def cache_from_redis(redis_store):
-    local_all_games = []
+    local_all_apps = []
     local_list_data = {}
-    local_gc_listname = {}
+    local_app_channel_listname = {}
     local_access_key = {}
-    local_dun_secret = {}
 
     for i in redis_store.scan_iter():
-        if i in ["waiting_update_list_detail", "waiting_update_gc_list", "ucache_check_alive_key"]:
+        if i in ["waiting_update_list_detail", "waiting_update_app_channel_list", "ucache_check_alive_key"]:
             continue
         if i[:13] == "chat_sentinel":
             continue
-        if i == "all_games":
-            local_all_games = list(redis_store.smembers(i))
+        if i == "all_apps":
+            local_all_apps = list(redis_store.smembers(i))
         elif i == "access_key":
             v = redis_store.hgetall(i)
             for k, ve in v.items():
                 local_access_key[k] = ve
-        elif i == "dun_secret":
-            v = redis_store.hgetall(i)
-            for k, ve in v.items():
-                local_dun_secret[k] = json.loads(ve)
-        elif i[:3] == "GC_":
+        elif i[:3] == "AC_":
             v = redis_store.hgetall(i)
             for k, ve in v.items():
                 if k == "swich_shumei":
                     v[k] = ve
                 else:
                     v[k] = json.loads(ve)
-            local_gc_listname[i] = v
+            local_app_channel_listname[i] = v
         else:
             v = redis_store.hgetall(i)
             data = pickle.loads(v["data"].encode("latin1")) if v.get("data") else ""
             v["data"] = data
             local_list_data[i] = v
 
-    local_all_games = list(set(local_all_games))
-    return local_all_games, local_gc_listname, local_list_data, local_access_key, local_dun_secret
+    local_all_apps = list(set(local_all_apps))
+    return local_all_apps, local_app_channel_listname, local_list_data, local_access_key
 
 
 def sql_data_to_redis(redis_url: str, mysql_url: str):
@@ -89,45 +84,45 @@ def sql_data_to_redis(redis_url: str, mysql_url: str):
         database=db,
     )
     redis_store = redis.Redis.from_url(redis_url, decode_responses=True)
-    read_sql_all_game(sql_db, redis_store)
-    read_sql_game_channel(sql_db, redis_store)
+    read_sql_all_app(sql_db, redis_store)
+    read_sql_app_channel(sql_db, redis_store)
     read_sql_detail_data(sql_db, redis_store)
 
 
-def read_sql_all_game(sql_db, redis_store):
+def read_sql_all_app(sql_db, redis_store):
     sql = """
                 SELECT 
-                    game_id
+                    app_id
                 FROM 
-                    game
+                    app
                 WHERE
                     delete_time IS NULL
                 """
     res = sql_db.select(sql)
     for i in res:
-        redis_store.sadd("all_games", i[0])
+        redis_store.sadd("all_apps", i[0])
 
 
-def read_sql_game_channel(sql_db, redis_store):
+def read_sql_app_channel(sql_db, redis_store):
     d = {}
     sql = """
             SELECT 
-                list_game_channel.list_no AS list_no, list_game_channel.game_id AS game_id, 
-                list_game_channel.channel_no AS channel_no, name_list.type AS list_type
+                list_app_channel.list_no AS list_no, list_app_channel.app_id AS app_id, 
+                list_app_channel.channel_id AS channel_id, name_list.type AS list_type
             FROM 
-                list_game_channel, name_list
+                list_app_channel, name_list
             WHERE
-                list_game_channel.list_no=name_list.no AND list_game_channel.delete_time IS NULL 
+                list_app_channel.list_no=name_list.no AND list_app_channel.delete_time IS NULL 
         """
     res = sql_db.select(sql, return_dict=True)
     for i in res:
-        game_channel = "GC_{}_{}".format(i["game_id"], i["channel_no"])
-        if not d.get(game_channel):
-            d[game_channel] = {}
-        if d[game_channel].get(i["list_type"]):
-            d[game_channel][i["list_type"]].append(i["list_no"])
+        app_channel = "AC_{}_{}".format(i["app_id"], i["channel_id"])
+        if not d.get(app_channel):
+            d[app_channel] = {}
+        if d[app_channel].get(i["list_type"]):
+            d[app_channel][i["list_type"]].append(i["list_no"])
         else:
-            d[game_channel][i["list_type"]] = [i["list_no"]]
+            d[app_channel][i["list_type"]] = [i["list_no"]]
 
     for k, v in d.items():
         for m, n in v.items():

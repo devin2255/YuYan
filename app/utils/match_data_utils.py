@@ -2,8 +2,8 @@ import json
 import time
 from random import choice
 
-from yuyan.app.utils.ad_detect_utils import ad_detect
-from yuyan.app.utils.enums import (
+from app.utils.ad_detect_utils import ad_detect
+from app.utils.enums import (
     ListMatchRuleEnum,
     ListMatchTypeEnum,
     ListRiskTypeEnum,
@@ -11,8 +11,8 @@ from yuyan.app.utils.enums import (
     ListTypeEnum,
     SwichEnum,
 )
-from yuyan.app.utils.llm_utils import get_llm_ans
-from yuyan.app.utils.tokenizer import AllTokenizer
+from app.utils.llm_utils import get_llm_ans
+from app.utils.tokenizer import AllTokenizer
 
 tokenizer = AllTokenizer()
 
@@ -44,11 +44,11 @@ def all_filter(msg, r, ctx, language_pred):
     }
 
     try:
-        cache_game_channel = ctx.config["GAME_CHANNEL"]
+        cache_app_channel = ctx.config["APP_CHANNEL"]
         cache_data = ctx.config["CACHE_DATA"]
         chat_sentinel = ctx.config.get("CHAT_SENTINEL", {})
 
-        white_list, ignore_list, black_list = get_white_black_list(msg, cache_game_channel)
+        white_list, ignore_list, black_list = get_white_black_list(msg, cache_app_channel)
 
         match_words = []
         format_match_words = []
@@ -69,14 +69,14 @@ def all_filter(msg, r, ctx, language_pred):
                 msg, cache_data, black_list, r, match_words, format_match_words, detail, language_pred, chat_sentinel, True
             )
             return_flag, r = blacklist_res[0], blacklist_res[1]
-            if ai_switch_is_on(ctx, msg.gameId):
+            if ai_switch_is_on(ctx, msg.app_id):
                 return_flag, r = ai_filter(ctx, msg, blacklist_res, r)
         else:
             blacklist_res = blacklist_filter(
                 msg, cache_data, black_list, r, match_words, format_match_words, detail, language_pred, chat_sentinel, False
             )
             return_flag, r = blacklist_res[0], blacklist_res[1]
-            if ai_switch_is_on(ctx, msg.gameId):
+            if ai_switch_is_on(ctx, msg.app_id):
                 return_flag, r = ai_filter(ctx, msg, blacklist_res, r)
 
         if return_flag:
@@ -93,59 +93,59 @@ def tokenize_text(text, match_type, text_language=None):
     return text
 
 
-def shumei_swich_is_off(game_channel, ctx, game_id):
-    cache_game_channel = ctx.config["GAME_CHANNEL"]
-    global_k = "GC_{}_all".format(game_id)
-    k = "GC_{}".format(game_channel)
-    if cache_game_channel.get(global_k):
-        swich_shumei = cache_game_channel[global_k].get("swich_shumei", "")
+def shumei_swich_is_off(app_channel, ctx, app_id):
+    cache_app_channel = ctx.config["APP_CHANNEL"]
+    global_k = "AC_{}_all".format(app_id)
+    k = "AC_{}".format(app_channel)
+    if cache_app_channel.get(global_k):
+        swich_shumei = cache_app_channel[global_k].get("swich_shumei", "")
         if swich_shumei != "":
-            swich = int(cache_game_channel[global_k]["swich_shumei"])
+            swich = int(cache_app_channel[global_k]["swich_shumei"])
             if SwichEnum(swich) == SwichEnum.OFF:
                 return True
-    if k != global_k and cache_game_channel.get(k):
-        swich_shumei = cache_game_channel[k].get("swich_shumei", "")
+    if k != global_k and cache_app_channel.get(k):
+        swich_shumei = cache_app_channel[k].get("swich_shumei", "")
         if swich_shumei != "":
-            swich = int(cache_game_channel[k]["swich_shumei"])
+            swich = int(cache_app_channel[k]["swich_shumei"])
             if SwichEnum(swich) == SwichEnum.OFF:
                 return True
     return False
 
 
-def ai_switch_is_on(ctx, game_id):
-    cache_game_channel = ctx.config["GAME_CHANNEL"]
-    k = "GC_{}_all".format(game_id)
-    if cache_game_channel.get(k, None):
-        ai_switch = cache_game_channel[k].get("ai_switch", "")
+def ai_switch_is_on(ctx, app_id):
+    cache_app_channel = ctx.config["APP_CHANNEL"]
+    k = "AC_{}_all".format(app_id)
+    if cache_app_channel.get(k, None):
+        ai_switch = cache_app_channel[k].get("ai_switch", "")
         if ai_switch != "":
-            swich = int(cache_game_channel[k]["ai_switch"])
+            swich = int(cache_app_channel[k]["ai_switch"])
             if SwichEnum(swich) == SwichEnum.ON:
                 return True
     return False
 
 
 def ac_switch_is_on(ctx, msg):
-    cache_game_channel = ctx.config["GAME_CHANNEL"]
-    k = f"GC_{msg.channel}"
-    global_k = "GC_{}_all".format(msg.gameId)
-    if cache_game_channel.get("GC_all_all", None):
-        ac_switch = cache_game_channel["GC_all_all"].get("ac_switch", "")
+    cache_app_channel = ctx.config["APP_CHANNEL"]
+    k = f"AC_{msg.channel}"
+    global_k = "AC_{}_all".format(msg.app_id)
+    if cache_app_channel.get("AC_all_all", None):
+        ac_switch = cache_app_channel["AC_all_all"].get("ac_switch", "")
         if ac_switch != "":
-            swich = int(cache_game_channel["GC_all_all"]["ac_switch"])
+            swich = int(cache_app_channel["AC_all_all"]["ac_switch"])
             if SwichEnum(swich) == SwichEnum.ON:
                 return True
 
-    if cache_game_channel.get(global_k, None):
-        ac_switch = cache_game_channel[global_k].get("ac_switch", "")
+    if cache_app_channel.get(global_k, None):
+        ac_switch = cache_app_channel[global_k].get("ac_switch", "")
         if ac_switch != "":
-            swich = int(cache_game_channel[global_k]["ac_switch"])
+            swich = int(cache_app_channel[global_k]["ac_switch"])
             if SwichEnum(swich) == SwichEnum.ON:
                 return True
 
-    if cache_game_channel.get(k, None):
-        ac_switch = cache_game_channel[k].get("ac_switch", "")
+    if cache_app_channel.get(k, None):
+        ac_switch = cache_app_channel[k].get("ac_switch", "")
         if ac_switch != "":
-            swich = int(cache_game_channel[k]["ac_switch"])
+            swich = int(cache_app_channel[k]["ac_switch"])
             if SwichEnum(swich) == SwichEnum.ON:
                 return True
     return False
@@ -191,7 +191,7 @@ def whitelist_filter(msg, cache_data, white_list, r, match_words, format_match_w
                     r["extra"]["desc"] = "命中自定义白名单"
                     r["extra"]["matchedFmtItem"] = ",".join(list(set(format_match_words)))
                     r["detail"] = detail
-                    r["requestId"] = msg.requestId
+                    r["requestId"] = msg.request_id
                     return True, r
     return False, r
 
@@ -256,8 +256,8 @@ def blacklist_filter(
     msg, cache_data, black_list, r, match_words, format_match_words, detail, language_pred, chat_sentinel, ac_switch
 ):
     if chat_sentinel != {}:
-        if chat_sentinel["account_id"].get(f"{msg.gameId}_{msg.accountId}", None):
-            rule_model = chat_sentinel["account_id"].get(f"{msg.gameId}_{msg.accountId}")[0]
+        if chat_sentinel["account_id"].get(f"{msg.app_id}_{msg.account_id}", None):
+            rule_model = chat_sentinel["account_id"].get(f"{msg.app_id}_{msg.account_id}")[0]
             detail["riskType"] = ListRiskTypeEnum.BLACK_ACCOUNT.value
             detail["matchedList"] = ""
             detail["matchedItem"] = ""
@@ -267,10 +267,10 @@ def blacklist_filter(
             r["riskLevel"] = "REJECT"
             r["extra"]["desc"] = "命中自定义策略模型"
             r["detail"] = detail
-            r["requestId"] = msg.requestId
+            r["requestId"] = msg.request_id
             return True, r
-        if chat_sentinel["ip"].get(f"{msg.gameId}_{msg.ip}", None):
-            rule_model = chat_sentinel["ip"].get(f"{msg.gameId}_{msg.ip}")[0]
+        if chat_sentinel["ip"].get(f"{msg.app_id}_{msg.ip}", None):
+            rule_model = chat_sentinel["ip"].get(f"{msg.app_id}_{msg.ip}")[0]
             detail["riskType"] = ListRiskTypeEnum.BLACK_IP.value
             detail["matchedList"] = ""
             detail["matchedItem"] = ""
@@ -280,7 +280,7 @@ def blacklist_filter(
             r["riskLevel"] = "REJECT"
             r["extra"]["desc"] = "命中自定义策略模型"
             r["detail"] = detail
-            r["requestId"] = msg.requestId
+            r["requestId"] = msg.request_id
             return True, r
 
     if not ac_switch:
@@ -361,7 +361,7 @@ def blacklist_filter(
         if msg.text not in match_rule_list:
             detail["contextText"] = match_rule_list[0]
             risk_type = choice(risk_types)
-            if msg.ip in match_rule_list or msg.accountId in match_rule_list:
+            if msg.ip in match_rule_list or msg.account_id in match_rule_list:
                 detail["riskType"] = int(risk_type)
             else:
                 detail["riskType"] = ListRiskTypeEnum.NICKNAME_RISK.value
@@ -392,20 +392,20 @@ def blacklist_filter(
         r["extra"]["desc"] = "命中自定义黑名单"
         r["extra"]["matchedFmtItem"] = ",".join(list(set(format_match_words)))
         r["detail"] = detail
-        r["requestId"] = msg.requestId
+        r["requestId"] = msg.request_id
         return True, r
 
     r["detail"] = detail
-    r["requestId"] = msg.requestId
+    r["requestId"] = msg.request_id
     return False, r
 
 
-def get_white_black_list(msg, cache_game_channel):
+def get_white_black_list(msg, cache_app_channel):
     white_list = []
     ignore_list = []
     black_list = []
-    if cache_game_channel.get("GC_{}".format(msg.channel)):
-        gc = cache_game_channel.get("GC_{}".format(msg.channel))
+    if cache_app_channel.get("AC_{}".format(msg.channel)):
+        gc = cache_app_channel.get("AC_{}".format(msg.channel))
         if gc.get(str(ListTypeEnum.WHITELIST.value)):
             white_list.extend(gc.get(str(ListTypeEnum.WHITELIST.value)))
         if gc.get(str(ListTypeEnum.IGNORE.value)):
@@ -413,8 +413,8 @@ def get_white_black_list(msg, cache_game_channel):
         if gc.get(str(ListTypeEnum.SENSITIVE.value)):
             black_list.extend(gc.get(str(ListTypeEnum.SENSITIVE.value)))
 
-    if cache_game_channel.get("GC_{}_all".format(str(msg.gameId))):
-        gc = cache_game_channel.get("GC_{}_all".format(str(msg.gameId)))
+    if cache_app_channel.get("AC_{}_all".format(str(msg.app_id))):
+        gc = cache_app_channel.get("AC_{}_all".format(str(msg.app_id)))
         if gc.get(str(ListTypeEnum.WHITELIST.value)):
             white_list.extend(gc.get(str(ListTypeEnum.WHITELIST.value)))
         if gc.get(str(ListTypeEnum.IGNORE.value)):
@@ -422,8 +422,8 @@ def get_white_black_list(msg, cache_game_channel):
         if gc.get(str(ListTypeEnum.SENSITIVE.value)):
             black_list.extend(gc.get(str(ListTypeEnum.SENSITIVE.value)))
 
-    if cache_game_channel.get("GC_all_all"):
-        gc = cache_game_channel.get("GC_all_all")
+    if cache_app_channel.get("AC_all_all"):
+        gc = cache_app_channel.get("AC_all_all")
         if gc.get(str(ListTypeEnum.WHITELIST.value)):
             white_list.extend(gc.get(str(ListTypeEnum.WHITELIST.value)))
         if gc.get(str(ListTypeEnum.IGNORE.value)):
@@ -450,7 +450,7 @@ def ai_filter(ctx, msg, blacklist_res, r):
             r["detail"] = detail
             r["riskLevel"] = "REJECT"
             return True, r
-        llm_ans = get_llm_ans(msg.gameId, msg.text, msg.chat_history)
+        llm_ans = get_llm_ans(msg.app_id, msg.text, msg.chat_history)
         if llm_ans:
             detail["riskType"] = 310
             detail["description"] = "广告拉人:卖号"
@@ -469,7 +469,7 @@ def ai_filter(ctx, msg, blacklist_res, r):
         r["riskLevel"] = "REJECT"
         return True, r
 
-    llm_ans = get_llm_ans(msg.gameId, msg.text, msg.chat_history)
+    llm_ans = get_llm_ans(msg.app_id, msg.text, msg.chat_history)
     if llm_ans:
         detail["riskType"] = 310
         detail["description"] = "广告拉人:卖号"

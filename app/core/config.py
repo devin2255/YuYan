@@ -22,7 +22,7 @@ class Settings(BaseSettings):
 
     ENVIRONMENT: str = "test"
     COUNTRY: str = "zh"
-    SQLALCHEMY_DATABASE_URI: str = "sqlite:///./yuyan.db"
+    SQLALCHEMY_DATABASE_URI: str = "mysql+pymysql://root:2255@localhost:3306/yuyan"
     REDIS_URL: str = "redis://localhost:6379/0"
     CHAT_LOG_REDIS_URL: Optional[str] = None
 
@@ -50,6 +50,7 @@ class Settings(BaseSettings):
         }
     )
     ACCESS_KEY_FALLBACK: Dict[str, str] = Field(default_factory=dict)
+    AUTO_CREATE_TABLES: Optional[bool] = None
 
     def as_dict(self) -> Dict[str, Any]:
         return self.model_dump() if hasattr(self, "model_dump") else self.dict()

@@ -2,11 +2,11 @@ import time
 
 from sqlalchemy.orm import Session
 
-from yuyan.app.core.exceptions import NotFound, ParameterException
-from yuyan.app.models.ac_switch import ACSwitch
-from yuyan.app.models.ai_switch import AISwitch
-from yuyan.app.models.model_threshold import ModelThreshold
-from yuyan.app.utils.enums import SwichEnum
+from app.core.exceptions import NotFound, ParameterException
+from app.models.ac_switch import ACSwitch
+from app.models.ai_switch import AISwitch
+from app.models.model_threshold import ModelThreshold
+from app.utils.enums import SwichEnum
 
 
 def get_ai_switch(db: Session, item_id: int):
@@ -24,20 +24,20 @@ def get_ai_switchs(db: Session):
 
 
 def create_ai_switch(db: Session, ctx, form):
-    exist = db.query(AISwitch).filter(AISwitch.game_id == form.game_id.data, AISwitch.delete_time.is_(None)).first()
+    exist = db.query(AISwitch).filter(AISwitch.app_id == form.app_id.data, AISwitch.delete_time.is_(None)).first()
     if exist:
         raise ParameterException(message="信息已存在")
     item = AISwitch(
         switch=SwichEnum[form.switch.data].value,
-        game_id=form.game_id.data,
+        app_id=form.app_id.data,
         create_by=form.username.data,
         update_by=form.username.data,
     )
     db.add(item)
     db.commit()
-    k = f"GC_{form.game_id.data}_all"
+    k = f"AC_{form.app_id.data}_all"
     ctx.redis.hset(k, "ai_switch", SwichEnum[form.switch.data].value)
-    ctx.redis.zadd("waiting_update_gc_list", {f"{k}|ai_switch": int(time.time())})
+    ctx.redis.zadd("waiting_update_app_channel_list", {f"{k}|ai_switch": int(time.time())})
     return True
 
 
@@ -46,9 +46,9 @@ def update_ai_switch(db: Session, ctx, item_id: int, form):
     item.switch = SwichEnum[form.switch.data].value
     db.add(item)
     db.commit()
-    k = f"GC_{item.game_id}_all"
+    k = f"AC_{item.app_id}_all"
     ctx.redis.hset(k, "ai_switch", SwichEnum[form.switch.data].value)
-    ctx.redis.zadd("waiting_update_gc_list", {f"{k}|ai_switch": int(time.time())})
+    ctx.redis.zadd("waiting_update_app_channel_list", {f"{k}|ai_switch": int(time.time())})
     return True
 
 
@@ -57,9 +57,9 @@ def delete_ai_switch(db: Session, ctx, item_id: int):
     item.soft_delete()
     db.add(item)
     db.commit()
-    k = f"GC_{item.game_id}_all"
+    k = f"AC_{item.app_id}_all"
     ctx.redis.hdel(k, "ai_switch")
-    ctx.redis.zadd("waiting_update_gc_list", {f"{k}|ai_switch": int(time.time())})
+    ctx.redis.zadd("waiting_update_app_channel_list", {f"{k}|ai_switch": int(time.time())})
     return True
 
 
@@ -78,21 +78,21 @@ def get_ac_switchs(db: Session):
 
 
 def create_ac_switch(db: Session, ctx, form):
-    exist = db.query(ACSwitch).filter(ACSwitch.game_id == form.game_id.data, ACSwitch.delete_time.is_(None)).first()
+    exist = db.query(ACSwitch).filter(ACSwitch.app_id == form.app_id.data, ACSwitch.delete_time.is_(None)).first()
     if exist:
         raise ParameterException(message="信息已存在")
     item = ACSwitch(
         switch=SwichEnum[form.switch.data].value,
-        game_id=form.game_id.data,
+        app_id=form.app_id.data,
         channel=form.channel.data,
         create_by=form.username.data,
         update_by=form.username.data,
     )
     db.add(item)
     db.commit()
-    k = f"GC_{form.game_id.data}_{form.channel.data}"
+    k = f"AC_{form.app_id.data}_{form.channel.data}"
     ctx.redis.hset(k, "ac_switch", SwichEnum[form.switch.data].value)
-    ctx.redis.zadd("waiting_update_gc_list", {f"{k}|ac_switch": int(time.time())})
+    ctx.redis.zadd("waiting_update_app_channel_list", {f"{k}|ac_switch": int(time.time())})
     return True
 
 
@@ -101,9 +101,9 @@ def update_ac_switch(db: Session, ctx, item_id: int, form):
     item.switch = SwichEnum[form.switch.data].value
     db.add(item)
     db.commit()
-    k = f"GC_{item.game_id}_{item.channel}"
+    k = f"AC_{item.app_id}_{item.channel}"
     ctx.redis.hset(k, "ac_switch", SwichEnum[form.switch.data].value)
-    ctx.redis.zadd("waiting_update_gc_list", {f"{k}|ac_switch": int(time.time())})
+    ctx.redis.zadd("waiting_update_app_channel_list", {f"{k}|ac_switch": int(time.time())})
     return True
 
 
@@ -112,9 +112,9 @@ def delete_ac_switch(db: Session, ctx, item_id: int):
     item.soft_delete()
     db.add(item)
     db.commit()
-    k = f"GC_{item.game_id}_{item.channel}"
+    k = f"AC_{item.app_id}_{item.channel}"
     ctx.redis.hdel(k, "ac_switch")
-    ctx.redis.zadd("waiting_update_gc_list", {f"{k}|ac_switch": int(time.time())})
+    ctx.redis.zadd("waiting_update_app_channel_list", {f"{k}|ac_switch": int(time.time())})
     return True
 
 
@@ -134,21 +134,21 @@ def get_thresholds(db: Session):
 
 def create_threshold(db: Session, ctx, form):
     exist = db.query(ModelThreshold).filter(
-        ModelThreshold.game_id == form.game_id.data, ModelThreshold.delete_time.is_(None)
+        ModelThreshold.app_id == form.app_id.data, ModelThreshold.delete_time.is_(None)
     ).first()
     if exist:
         raise ParameterException(message="信息已存在")
     item = ModelThreshold(
-        game_id=form.game_id.data,
+        app_id=form.app_id.data,
         threshold=form.threshold.data,
         create_by=form.username.data,
         update_by=form.username.data,
     )
     db.add(item)
     db.commit()
-    k = f"GC_{form.game_id.data}_all"
+    k = f"AC_{form.app_id.data}_all"
     ctx.redis.hset(k, "model_threshold", form.threshold.data)
-    ctx.redis.zadd("waiting_update_gc_list", {f"{k}|model_threshold": int(time.time())})
+    ctx.redis.zadd("waiting_update_app_channel_list", {f"{k}|model_threshold": int(time.time())})
     return True
 
 
@@ -157,9 +157,9 @@ def update_threshold(db: Session, ctx, item_id: int, form):
     item.threshold = form.threshold.data
     db.add(item)
     db.commit()
-    k = f"GC_{item.game_id}_all"
+    k = f"AC_{item.app_id}_all"
     ctx.redis.hset(k, "model_threshold", form.threshold.data)
-    ctx.redis.zadd("waiting_update_gc_list", {f"{k}|model_threshold": int(time.time())})
+    ctx.redis.zadd("waiting_update_app_channel_list", {f"{k}|model_threshold": int(time.time())})
     return True
 
 
@@ -168,7 +168,7 @@ def delete_threshold(db: Session, ctx, item_id: int):
     item.soft_delete()
     db.add(item)
     db.commit()
-    k = f"GC_{item.game_id}_all"
+    k = f"AC_{item.app_id}_all"
     ctx.redis.hdel(k, "model_threshold")
-    ctx.redis.zadd("waiting_update_gc_list", {f"{k}|model_threshold": int(time.time())})
+    ctx.redis.zadd("waiting_update_app_channel_list", {f"{k}|model_threshold": int(time.time())})
     return True

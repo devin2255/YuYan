@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String
 
-from yuyan.app.models.base import BaseModel
+from app.models.base import BaseModel
 
 
 class RiskType(BaseModel):

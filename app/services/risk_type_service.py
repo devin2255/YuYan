@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 
-from yuyan.app.core.exceptions import NotFound, ParameterException
-from yuyan.app.models.risk_type import RiskType
+from app.core.exceptions import NotFound, ParameterException
+from app.models.risk_type import RiskType
 
 
 def get_risk_types(db: Session):

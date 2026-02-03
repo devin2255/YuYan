@@ -1,15 +1,15 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends
 
 from sqlalchemy.orm import Session
 
-from yuyan.app.api.deps import get_ctx, get_db
-from yuyan.app.schemas.switch import CreateACSwitch, UpdateACSwitch
-from yuyan.app.services import game_service, switch_service
-from yuyan.app.services.response import success_response
-from yuyan.app.services.serializer import to_dict
-from yuyan.app.services.validators import FormProxy, parse_request_payload
+from app.api.deps import get_ctx, get_db
+from app.schemas.switch import CreateACSwitch, UpdateACSwitch
+from app.services import app_service, switch_service
+from app.services.response import success_response
+from app.services.serializer import to_dict
+from app.services.validators import FormProxy
 
-router = APIRouter(prefix="/ac_switch")
+router = APIRouter(prefix="/ac-switches")
 
 
 @router.get("/{id}")
@@ -25,20 +25,18 @@ def get_ac_switchs(db: Session = Depends(get_db)):
 
 
 @router.post("")
-async def create_ac_switch(request: Request, db: Session = Depends(get_db), ctx=Depends(get_ctx)):
-    payload = await parse_request_payload(request)
-    form_data = CreateACSwitch(**payload)
-    form = FormProxy(**form_data.dict())
-    game_service.get_game(db, form.game_id.data)
+async def create_ac_switch(payload: CreateACSwitch, db: Session = Depends(get_db), ctx=Depends(get_ctx)):
+    form_data = payload
+    form = FormProxy(**form_data.model_dump())
+    app_service.get_app(db, form.app_id.data)
     switch_service.create_ac_switch(db, ctx, form)
     return success_response(msg="新建成功")
 
 
 @router.put("/{id}")
-async def update_ac_switch(id: str, request: Request, db: Session = Depends(get_db), ctx=Depends(get_ctx)):
-    payload = await parse_request_payload(request)
-    form_data = UpdateACSwitch(**payload)
-    form = FormProxy(**form_data.dict())
+async def update_ac_switch(id: str, payload: UpdateACSwitch, db: Session = Depends(get_db), ctx=Depends(get_ctx)):
+    form_data = payload
+    form = FormProxy(**form_data.model_dump())
     switch_service.update_ac_switch(db, ctx, int(id), form)
     return success_response(msg="更新成功")
 

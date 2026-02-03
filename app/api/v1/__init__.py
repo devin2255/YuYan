@@ -5,7 +5,7 @@ from .ai_switch import router as ai_switch_router
 from .base import router as base_router
 from .black_client_ip import router as black_ip_router
 from .channel import router as channel_router
-from .game import router as game_router
+from .app import router as app_router
 from .image import router as image_router
 from .language import router as language_router
 from .list_detail import router as list_detail_router
@@ -17,7 +17,7 @@ from .text import router as text_router
 router = APIRouter()
 router.include_router(text_router)
 router.include_router(image_router)
-router.include_router(game_router)
+router.include_router(app_router)
 router.include_router(channel_router)
 router.include_router(name_list_router)
 router.include_router(list_detail_router)

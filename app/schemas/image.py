@@ -4,5 +4,5 @@ from .common import APIModel
 
 
 class ImageRequest(APIModel):
-    accessKey: str
+    access_key: str
     data: Any

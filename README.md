@@ -37,7 +37,7 @@
 ---
 
 ## 适用场景
-- 游戏内玩家互动内容的合规审核
+- 应用内用户互动内容的合规审核
 - 社区论坛、社交媒体的文本过滤
 - 实时聊天应用中的敏感内容监控
 - 电商平台评论区、用户反馈的违规内容识别
@@ -55,13 +55,13 @@ pip install -r yuyan/requirements.txt
 2. 启动服务（开发）：
 
 ```
-uvicorn yuyan.app.main:app --host 0.0.0.0 --port 22560
+uvicorn app.main:app --host 0.0.0.0 --port 22560
 ```
 
 3. 启动服务（生产）：
 
 ```
-gunicorn -k uvicorn.workers.UvicornWorker -w 8 --timeout 180 -b 0.0.0.0:22560 yuyan.app.main:app
+gunicorn -k uvicorn.workers.UvicornWorker -w 8 --timeout 180 -b 0.0.0.0:22560 app.main:app
 ```
 
 4. 环境变量示例（可选）：
@@ -72,6 +72,34 @@ export deploy=inlandTest
 
 # Windows PowerShell
 $env:deploy="inlandTest"
+```
+
+5. 数据库初始化与迁移（开发）：
+
+- 开发环境默认会自动 `create_all()` 建表（`ENVIRONMENT != production`）。
+- 如需显式控制，可设置：
+
+```
+AUTO_CREATE_TABLES=true
+```
+
+- MySQL 连接示例（默认配置）：
+
+```
+SQLALCHEMY_DATABASE_URI=mysql+pymysql://root:2255@localhost:3306/yuyan
+```
+
+- 首次使用请先创建数据库：
+
+```
+CREATE DATABASE yuyan CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+- Alembic 迁移（推荐）：
+
+```
+alembic revision --autogenerate -m "init"
+alembic upgrade head
 ```
 
 ## 测试

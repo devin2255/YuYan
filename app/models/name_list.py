@@ -1,7 +1,7 @@
 from sqlalchemy import Boolean, Column, Integer, String
 
-from yuyan.app.models.base import BaseModel
-from yuyan.app.utils.enums import (
+from app.models.base import BaseModel
+from app.utils.enums import (
     ListMatchRuleEnum,
     ListMatchTypeEnum,
     ListRiskTypeEnum,

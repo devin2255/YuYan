@@ -39,11 +39,11 @@ class ListMatchRuleEnum(Enum):
             cls.TEXT.value: ["text"],
             cls.ROLE_NAME.value: ["nickname"],
             cls.IP.value: ["ip"],
-            cls.SERVER_ID.value: ["serverId"],
-            cls.ROLE_AND_SERVER_ID.value: ["RoleIdAndServerId"],
-            cls.ACCOUNT_ID.value: ["accountId"],
-            cls.YOUZU_ID.value: ["youzuId"],
-            cls.FINGERPRINT_ID.value: ["fingerprintId"],
+            cls.SERVER_ID.value: ["server_id"],
+            cls.ROLE_AND_SERVER_ID.value: ["role_id_and_server_id"],
+            cls.ACCOUNT_ID.value: ["account_id"],
+            cls.YOUZU_ID.value: ["youzu_id"],
+            cls.FINGERPRINT_ID.value: ["fingerprint_id"],
         }
         return key_map[status]
 
@@ -54,10 +54,15 @@ class ListMatchRuleEnum(Enum):
             "文本": cls.TEXT,
             "昵称": cls.ROLE_NAME,
             "ip": cls.IP,
+            "server_id": cls.SERVER_ID,
             "serverId": cls.SERVER_ID,
+            "role_id_and_server_id": cls.ROLE_AND_SERVER_ID,
             "RoleIdAndServerId": cls.ROLE_AND_SERVER_ID,
+            "account_id": cls.ACCOUNT_ID,
             "accountId": cls.ACCOUNT_ID,
+            "youzu_id": cls.YOUZU_ID,
             "youzuId": cls.YOUZU_ID,
+            "fingerprint_id": cls.FINGERPRINT_ID,
             "fingerprintId": cls.FINGERPRINT_ID,
         }
         return key_map[s]
@@ -69,11 +74,11 @@ class ListMatchRuleEnum(Enum):
             cls.TEXT.value: [msg.text],
             cls.ROLE_NAME.value: [msg.nickname],
             cls.IP.value: [msg.ip],
-            cls.SERVER_ID.value: [msg.serverId],
-            cls.ROLE_AND_SERVER_ID.value: ["{}_{}".format(msg.serverId, msg.roleId)],
-            cls.ACCOUNT_ID.value: [msg.accountId],
-            cls.YOUZU_ID.value: [msg.youzuId],
-            cls.FINGERPRINT_ID.value: [msg.fingerprintId],
+            cls.SERVER_ID.value: [msg.server_id],
+            cls.ROLE_AND_SERVER_ID.value: ["{}_{}".format(msg.server_id, msg.role_id)],
+            cls.ACCOUNT_ID.value: [msg.account_id],
+            cls.YOUZU_ID.value: [msg.youzu_id],
+            cls.FINGERPRINT_ID.value: [msg.fingerprint_id],
         }
         return key_map[int(s)]
 

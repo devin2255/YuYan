@@ -6,11 +6,11 @@ import uuid
 from datetime import datetime
 from typing import Any, Dict, Tuple
 
-from yuyan.app.core.exceptions import ParameterException
-from yuyan.app.models.chat_msg import ChatMsg
-from yuyan.app.utils.enums import ListRiskTypeEnum
-from yuyan.app.utils.language_classification import LanguageClassification
-from yuyan.app.utils.match_data_utils import all_filter
+from app.core.exceptions import ParameterException
+from app.models.chat_msg import ChatMsg
+from app.utils.enums import ListRiskTypeEnum
+from app.utils.language_classification import LanguageClassification
+from app.utils.match_data_utils import all_filter
 
 from .validators import TEXT_REQUIRED_FIELDS, ensure_required_fields
 
@@ -52,26 +52,26 @@ def build_pass_detail(chat_msg: ChatMsg) -> Dict[str, Any]:
 
 
 def process_msg_data(raw_data: Dict[str, Any], ctx) -> Dict[str, Any]:
-    if str(raw_data.get("gameId")) == "94" and "channel" not in raw_data:
+    if str(raw_data.get("app_id")) == "94" and "channel" not in raw_data:
         raw_data["channel"] = ""
     raw_data.setdefault("relationship", "")
-    raw_data.setdefault("targetId", "")
-    raw_data.setdefault("requestId", str(uuid.uuid1()))
-    raw_data.setdefault("btId", str(uuid.uuid1()))
+    raw_data.setdefault("target_id", "")
+    raw_data.setdefault("request_id", str(uuid.uuid1()))
+    raw_data.setdefault("bt_id", str(uuid.uuid1()))
 
-    if raw_data.get("accountId") is None:
-        raw_data["tokenId"] = f"{raw_data.get('gameId')}_{raw_data.get('serverId')}_{raw_data.get('roleId')}"
+    if raw_data.get("account_id") is None:
+        raw_data["token_id"] = f"{raw_data.get('app_id')}_{raw_data.get('server_id')}_{raw_data.get('role_id')}"
     else:
-        raw_data["tokenId"] = str(raw_data.get("accountId"))
+        raw_data["token_id"] = str(raw_data.get("account_id"))
 
-    raw_data["channel"] = f"{raw_data.get('gameId')}_{raw_data.get('channel', '')}"
+    raw_data["channel"] = f"{raw_data.get('app_id')}_{raw_data.get('channel', '')}"
     raw_data = get_history_chat(raw_data, ctx)
     return raw_data
 
 
 def get_history_chat(raw_data: Dict[str, Any], ctx) -> Dict[str, Any]:
     if (
-        str(raw_data.get("gameId")) not in ["2013101", "2013001"]
+        str(raw_data.get("app_id")) not in ["2013101", "2013001"]
         or "NICKNAME_CHECK" in str(raw_data.get("channel"))
         or raw_data.get("text") == ""
     ):
@@ -80,7 +80,7 @@ def get_history_chat(raw_data: Dict[str, Any], ctx) -> Dict[str, Any]:
     if not redis_client:
         return raw_data
     try:
-        key = f"roleChatContent:{raw_data.get('gameId')}:{raw_data.get('accountId')}:{raw_data.get('roleId')}"
+        key = f"roleChatContent:{raw_data.get('app_id')}:{raw_data.get('account_id')}:{raw_data.get('role_id')}"
         res = redis_client.get(key)
         if res:
             data = json.loads(res)
@@ -101,9 +101,9 @@ def handle_text_filter(raw_data: Dict[str, Any], ctx) -> Tuple[Dict[str, Any], D
     start_time = time.time()
     r = build_base_response(ctx)
 
-    raw_data.setdefault("tokenId", None)
-    if raw_data.get("gameId") and raw_data.get("tokenId") is None:
-        raw_data["tokenId"] = f"{raw_data.get('gameId')}_{raw_data.get('serverId')}_{raw_data.get('roleId')}"
+    raw_data.setdefault("token_id", None)
+    if raw_data.get("app_id") and raw_data.get("token_id") is None:
+        raw_data["token_id"] = f"{raw_data.get('app_id')}_{raw_data.get('server_id')}_{raw_data.get('role_id')}"
 
     ensure_required_fields(raw_data, TEXT_REQUIRED_FIELDS)
     data_params = process_msg_data(raw_data, ctx)
@@ -111,10 +111,10 @@ def handle_text_filter(raw_data: Dict[str, Any], ctx) -> Tuple[Dict[str, Any], D
     chat_msg = ChatMsg()
     chat_msg.set_attrs(data_params)
 
-    # gameId 校验
-    all_games = ctx.config.get("ALL_GAMES", [])
-    if str(chat_msg.gameId) not in all_games or chat_msg.gameId == "all":
-        raise ParameterException(msg="gameId 不存在")
+    # app_id 校验
+    all_apps = ctx.config.get("ALL_APPS", [])
+    if str(chat_msg.app_id) not in all_apps or chat_msg.app_id == "all":
+        raise ParameterException(msg="app_id 不存在")
 
     # 语种识别
     if ctx.config.get("LANGUAGE_SWITCH"):
@@ -137,13 +137,13 @@ def handle_text_filter(raw_data: Dict[str, Any], ctx) -> Tuple[Dict[str, Any], D
         detail = ml_res.get("detail", {})
         ml_res["detail"] = json.dumps(detail, ensure_ascii=False)
         if not ml_res.get("requestId"):
-            ml_res["requestId"] = chat_msg.requestId
+            ml_res["requestId"] = chat_msg.request_id
         ml_res["extra"]["response_time"]["total"] = int((time.time() - start_time) * 1000)
         return ml_res, data_params
 
     # 默认 PASS
     r["riskLevel"] = "PASS"
     r["detail"] = json.dumps(build_pass_detail(chat_msg), ensure_ascii=False)
-    r["requestId"] = chat_msg.requestId
+    r["requestId"] = chat_msg.request_id
     r["extra"]["response_time"]["total"] = int((time.time() - start_time) * 1000)
     return r, data_params

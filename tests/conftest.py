@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import shutil
+import uuid
 
 import pytest
 from fastapi.testclient import TestClient
 
-from yuyan.app import main as main_module
+from app import main as main_module
 
 
 class DummySettings:
@@ -135,6 +137,16 @@ def fake_redis():
 
 
 @pytest.fixture
+def tmp_path():
+    base = Path.cwd() / ".tmp_tests"
+    base.mkdir(parents=True, exist_ok=True)
+    path = base / f"tmp_{uuid.uuid4().hex}"
+    path.mkdir(parents=True, exist_ok=True)
+    yield path
+    shutil.rmtree(path, ignore_errors=True)
+
+
+@pytest.fixture
 def client(monkeypatch, tmp_path, fake_redis):
     black_file = Path(tmp_path / "black_client_ip.txt")
     black_file.write_text("1.1.1.1\n", encoding="utf-8")
@@ -159,17 +171,16 @@ def client(monkeypatch, tmp_path, fake_redis):
         "BLACK_CLIENT_IP_FILE": str(black_file),
     }
 
-    fake_redis.sadd("all_games", "1001")
+    fake_redis.sadd("all_apps", "1001")
     fake_redis.hset("access_key", "1001", "test_key")
-    fake_redis.hset("dun_secret", "1001", json.dumps({"secret_id": "sid", "secret_key": "skey"}))
 
     monkeypatch.setattr(main_module.redis.Redis, "from_url", lambda *args, **kwargs: fake_redis)
     monkeypatch.setattr(main_module, "KafkaLog", DummyKafkaLog)
     monkeypatch.setattr(main_module, "load_settings", lambda: DummySettings(settings_data))
 
     fake_builder = lambda wordlist: FakeACTree(wordlist)
-    from yuyan.app.utils import ahocorasick_utils
-    from yuyan.app.services import list_detail_service
+    from app.utils import ahocorasick_utils
+    from app.services import list_detail_service
 
     monkeypatch.setattr(ahocorasick_utils, "build_actree", fake_builder)
     monkeypatch.setattr(list_detail_service, "build_actree", fake_builder)
