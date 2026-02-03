@@ -18,13 +18,20 @@ def load_cache_from_redis(redis_client) -> Tuple[list, Dict, Dict, Dict]:
             continue
         if key.startswith("chat_sentinel"):
             continue
+        key_type = redis_client.type(key)
+        if key_type in {"none", None}:
+            continue
         if key == "all_apps":
-            local_all_apps = list(redis_client.smembers(key))
+            if key_type == "set":
+                local_all_apps = list(redis_client.smembers(key))
             continue
         if key == "access_key":
-            local_access_key = redis_client.hgetall(key)
+            if key_type == "hash":
+                local_access_key = redis_client.hgetall(key)
             continue
         if key.startswith("AC_"):
+            if key_type != "hash":
+                continue
             v = redis_client.hgetall(key)
             for k, ve in v.items():
                 if k == "swich_shumei":
@@ -34,6 +41,8 @@ def load_cache_from_redis(redis_client) -> Tuple[list, Dict, Dict, Dict]:
             local_app_channel_listname[key] = v
             continue
 
+        if key_type != "hash":
+            continue
         v = redis_client.hgetall(key)
         raw = v.get("data")
         if raw:
