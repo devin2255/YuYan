@@ -2,13 +2,13 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends
 
-from app.api.deps import get_ctx
+from app.api.deps import get_ctx, get_current_user
 from app.core.exceptions import ParameterException
 from app.schemas.black_ip import BlackIP
 from app.services.response import success_response
 from app.services.validators import FormProxy
 
-router = APIRouter(prefix="/blacklisted-ips")
+router = APIRouter(prefix="/blacklisted-ips", dependencies=[Depends(get_current_user)])
 
 
 @router.get("")

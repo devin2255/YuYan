@@ -222,6 +222,17 @@ class ListStatusEnum(Enum):
         return key_map[s]
 
 
+class ListScopeEnum(Enum):
+    GLOBAL = "GLOBAL"
+    APP = "APP"
+    APP_CHANNEL = "APP_CHANNEL"
+
+
+class ListLanguageScopeEnum(Enum):
+    ALL = "ALL"
+    SPECIFIC = "SPECIFIC"
+
+
 class SwichEnum(Enum):
     OFF = 0
     ON = 1

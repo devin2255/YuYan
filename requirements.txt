@@ -11,3 +11,5 @@ python-multipart
 pyahocorasick
 janome
 six
+PyJWT
+passlib

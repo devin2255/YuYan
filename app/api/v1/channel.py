@@ -2,14 +2,16 @@ from fastapi import APIRouter, Depends
 
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db
-from app.schemas.channel import CreateChannel, UpdateChannel
+from app.api.deps import get_db, get_current_user
+from typing import Optional
+
+from app.schemas.channel import CreateChannel, DeleteChannel, UpdateChannel
 from app.services import channel_service
 from app.services.response import success_response
 from app.services.serializer import to_dict
 from app.services.validators import FormProxy
 
-router = APIRouter(prefix="/channels")
+router = APIRouter(prefix="/channels", dependencies=[Depends(get_current_user)])
 
 
 @router.get("/{channel_id}")
@@ -41,6 +43,15 @@ async def update_channel(channel_id: int, payload: UpdateChannel, db: Session = 
 
 
 @router.delete("/{channel_id}")
-def delete_channel(channel_id: int, db: Session = Depends(get_db)):
-    channel_service.delete_channel(db, channel_id)
+async def delete_channel(
+    channel_id: int,
+    payload: Optional[DeleteChannel] = None,
+    db: Session = Depends(get_db),
+):
+    if payload is None:
+        form = FormProxy(username="")
+    else:
+        form_data = payload
+        form = FormProxy(**form_data.model_dump())
+    channel_service.delete_channel(db, channel_id, form)
     return success_response(msg="删除渠道成功")

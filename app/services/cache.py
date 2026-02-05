@@ -7,6 +7,13 @@ import time
 from typing import Dict, Tuple
 
 
+def _redis_type(redis_client, key: str) -> str:
+    raw = redis_client.type(key)
+    if isinstance(raw, bytes):
+        return raw.decode("utf-8", errors="ignore")
+    return str(raw)
+
+
 def load_cache_from_redis(redis_client) -> Tuple[list, Dict, Dict, Dict]:
     local_all_apps = []
     local_list_data = {}
@@ -14,7 +21,14 @@ def load_cache_from_redis(redis_client) -> Tuple[list, Dict, Dict, Dict]:
     local_access_key = {}
 
     for key in redis_client.scan_iter():
-        if key in {"waiting_update_list_detail", "waiting_update_app_channel_list", "ucache_check_alive_key"}:
+        if key in {
+            "waiting_update_list_detail",
+            "waiting_update_app_channel_list",
+            "ucache_check_alive_key",
+            "list_detail_version_seq",
+            "list_detail_version",
+            "list_detail_version_index",
+        }:
             continue
         if key.startswith("chat_sentinel"):
             continue
@@ -34,6 +48,8 @@ def load_cache_from_redis(redis_client) -> Tuple[list, Dict, Dict, Dict]:
             local_app_channel_listname[key] = v
             continue
 
+        if _redis_type(redis_client, key) != "hash":
+            continue
         v = redis_client.hgetall(key)
         raw = v.get("data")
         if raw:
@@ -97,10 +113,16 @@ def update_cache_data(ctx) -> bool:
                 ctx.config.setdefault("APP_CHANNEL", {})
                 ctx.config["APP_CHANNEL"].setdefault(gc, {})[key] = new_data
 
-        # 更新 CACHE_DATA
-        num_detail = redis_client.zcount("waiting_update_list_detail", min=t - 500, max=t)
-        if num_detail:
-            for list_no in redis_client.zrevrangebyscore("waiting_update_list_detail", min=t - 500, max=t):
+        # 更新 CACHE_DATA（基于版本号增量更新）
+        last_version = ctx.config.get("LIST_DETAIL_VERSION", 0)
+        updated_list = redis_client.zrevrangebyscore(
+            "list_detail_version_index", min=last_version + 1, max=10**18
+        )
+        if updated_list:
+            max_version = last_version
+            for list_no in updated_list:
+                if _redis_type(redis_client, list_no) != "hash":
+                    continue
                 v = redis_client.hgetall(list_no)
                 raw = v.get("data")
                 if raw:
@@ -113,13 +135,27 @@ def update_cache_data(ctx) -> bool:
                 v["data"] = data
                 ctx.config.setdefault("CACHE_DATA", {})
                 ctx.config["CACHE_DATA"][list_no] = v
+                raw_version = redis_client.hget("list_detail_version", list_no)
+                if raw_version:
+                    try:
+                        version = int(raw_version)
+                        if version > max_version:
+                            max_version = version
+                    except Exception:
+                        pass
+            ctx.config["LIST_DETAIL_VERSION"] = max_version
 
-        # 清理过期记录
+        # 清理过期记录（仅保留 app_channel 队列清理）
         if redis_client.zcount("waiting_update_app_channel_list", min=0, max=t - 500):
             redis_client.zremrangebyscore("waiting_update_app_channel_list", min=0, max=t - 500)
-        if redis_client.zcount("waiting_update_list_detail", min=0, max=t - 500):
-            redis_client.zremrangebyscore("waiting_update_list_detail", min=0, max=t - 500)
         return True
     except Exception as err:
         ctx.logger.debug(f"update cache err: {err}")
         return False
+
+
+def bump_list_detail_version(redis_client, list_no: str) -> int:
+    version = int(redis_client.incr("list_detail_version_seq"))
+    redis_client.hset("list_detail_version", list_no, version)
+    redis_client.zadd("list_detail_version_index", {list_no: version})
+    return version

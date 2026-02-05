@@ -2,14 +2,14 @@ from fastapi import APIRouter, Depends
 
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_ctx, get_db
+from app.api.deps import get_ctx, get_db, get_current_user
 from app.schemas.app import CreateApp, UpdateApp
 from app.services.response import success_response
 from app.services.serializer import to_dict
 from app.services.validators import FormProxy
 from app.services import app_service
 
-router = APIRouter(prefix="/apps")
+router = APIRouter(prefix="/apps", dependencies=[Depends(get_current_user)])
 
 
 @router.get("/{app_id}")

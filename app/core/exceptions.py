@@ -48,3 +48,9 @@ class NotFound(APIException):
     status_code = 404
     error_code = 10020
     message = "资源不存在"
+
+
+class Unauthorized(APIException):
+    status_code = 401
+    error_code = 40100
+    message = "未授权"

@@ -6,6 +6,7 @@ from .base import router as base_router
 from .black_client_ip import router as black_ip_router
 from .channel import router as channel_router
 from .app import router as app_router
+from .auth import router as auth_router
 from .image import router as image_router
 from .language import router as language_router
 from .list_detail import router as list_detail_router
@@ -17,6 +18,7 @@ from .text import router as text_router
 router = APIRouter()
 router.include_router(text_router)
 router.include_router(image_router)
+router.include_router(auth_router)
 router.include_router(app_router)
 router.include_router(channel_router)
 router.include_router(name_list_router)

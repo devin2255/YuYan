@@ -52,6 +52,16 @@ class Settings(BaseSettings):
     ACCESS_KEY_FALLBACK: Dict[str, str] = Field(default_factory=dict)
     AUTO_CREATE_TABLES: Optional[bool] = None
 
+    JWT_SECRET: str = "change-me"
+    JWT_ALGORITHM: str = "HS256"
+    JWT_ACCESS_TTL_MINUTES: int = 30
+    JWT_REFRESH_TTL_DAYS: int = 30
+    JWT_REFRESH_COOKIE_NAME: str = "refresh_token"
+    JWT_COOKIE_SECURE: bool = False
+    JWT_COOKIE_SAMESITE: str = "lax"
+
+    CORS_ORIGINS: str = "http://localhost:25173,http://127.0.0.1:25173"
+
     def as_dict(self) -> Dict[str, Any]:
         return self.model_dump() if hasattr(self, "model_dump") else self.dict()
 

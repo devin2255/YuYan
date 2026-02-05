@@ -12,3 +12,7 @@ class CreateChannel(APIModel):
 class UpdateChannel(APIModel):
     name: str
     memo: Optional[str] = None
+
+
+class DeleteChannel(APIModel):
+    username: Optional[str] = ""

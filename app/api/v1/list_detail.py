@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Query
 
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_ctx, get_db
+from app.api.deps import get_ctx, get_db, get_current_user
 from app.schemas.list_detail import (
     CreateBatchDetail,
     CreateDetail,
@@ -19,7 +19,7 @@ from app.services.response import success_response
 from app.services.serializer import to_dict
 from app.services.validators import FormProxy
 
-router = APIRouter(prefix="/list-details")
+router = APIRouter(prefix="/list-details", dependencies=[Depends(get_current_user)])
 
 
 def normalize_text_list(value) -> List[str]:

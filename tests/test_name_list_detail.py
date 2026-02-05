@@ -12,9 +12,11 @@ def test_name_list_and_detail(client):
         "suggest": 1,
         "risk_type": 300,
         "status": 1,
-        "language": "all",
-        "channel": channel_id,
-        "app_id": "4001",
+        "language_scope": "ALL",
+        "language_codes": [],
+        "scope": "APP_CHANNEL",
+        "channel_ids": [channel_id],
+        "app_ids": ["4001"],
         "username": "tester",
     }
     resp = client.post("/name-lists", json=create_payload)

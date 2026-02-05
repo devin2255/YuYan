@@ -1,5 +1,4 @@
 import pickle
-import time
 from datetime import datetime
 
 from sqlalchemy.orm import Session
@@ -8,6 +7,7 @@ from app.core.exceptions import NotFound, ParameterException
 from app.models.list_detail import ListDetail
 from app.utils.ahocorasick_utils import build_actree
 from app.utils.enums import ListMatchTypeEnum
+from app.services.cache import bump_list_detail_version
 from app.utils.tokenizer import AllTokenizer
 
 tokenizer = AllTokenizer()
@@ -197,7 +197,7 @@ def _add_redis_data(ctx, name_list, raw_text):
             "data": _serialize_actree(build_actree([(filter_text, raw_text)])),
         }
         redis_client.hset(list_no, mapping=r)
-    redis_client.zadd("waiting_update_list_detail", {list_no: int(time.time())})
+    bump_list_detail_version(redis_client, list_no)
 
 
 def _add_batch_redis_data(ctx, name_list, text_list):
@@ -235,7 +235,7 @@ def _add_batch_redis_data(ctx, name_list, text_list):
             "data": _serialize_actree(ac_data),
         }
         redis_client.hset(list_no, mapping=r)
-    redis_client.zadd("waiting_update_list_detail", {list_no: int(time.time())})
+    bump_list_detail_version(redis_client, list_no)
 
 
 def _remove_redis_word(ctx, name_list, text):
@@ -256,7 +256,7 @@ def _remove_redis_word(ctx, name_list, text):
         ac_data.remove_word(filter_text)
         ac_data.make_automaton()
         redis_client.hset(list_no, "data", _serialize_actree(ac_data))
-        redis_client.zadd("waiting_update_list_detail", {list_no: int(time.time())})
+        bump_list_detail_version(redis_client, list_no)
     except Exception:
         return
 
@@ -281,4 +281,4 @@ def _update_redis_word(ctx, name_list, old_text, new_text):
     ac_data.add_word(new_filter_text, (new_filter_text, new_text))
     ac_data.make_automaton()
     redis_client.hset(list_no, "data", _serialize_actree(ac_data))
-    redis_client.zadd("waiting_update_list_detail", {list_no: int(time.time())})
+    bump_list_detail_version(redis_client, list_no)

@@ -39,9 +39,9 @@ def update_channel(db: Session, channel_id: int, form):
     return True
 
 
-def delete_channel(db: Session, channel_id: int):
+def delete_channel(db: Session, channel_id: int, form):
     channel = get_channel(db, channel_id)
-    channel.soft_delete()
+    channel.soft_delete(form.username.data)
     db.add(channel)
     db.commit()
     return True

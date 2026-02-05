@@ -4,13 +4,13 @@ import time
 
 from fastapi import APIRouter, Depends, Request
 
-from app.api.deps import get_ctx, get_db
+from app.api.deps import get_ctx, get_db, get_current_user
 from app.core.exceptions import NotFound
 from app.utils.cache_sql_data import sql_data_to_redis
-from app.services.cache import load_cache_from_redis, load_chat_sentinel, update_cache_data
+from app.services.cache import bump_list_detail_version, load_cache_from_redis, load_chat_sentinel, update_cache_data
 from app.services.response import success_response
 
-router = APIRouter(prefix="/cache")
+router = APIRouter(prefix="/cache", dependencies=[Depends(get_current_user)])
 
 
 @router.get("/apps")
@@ -73,13 +73,8 @@ def update_local_app_channel_from_redis(ctx=Depends(get_ctx)):
 @router.get("/redis/pending-list-details")
 def get_waiting_update_list_detail(ctx=Depends(get_ctx)):
     redis_client = ctx.redis
-    list_detail = []
-    t = int(time.time())
-    num_detail = redis_client.zcount("waiting_update_list_detail", min=t - 500, max=t)
-    if num_detail:
-        for i in redis_client.zrevrangebyscore("waiting_update_list_detail", min=t - 500, max=t):
-            list_detail.append(i)
-    return list_detail
+    updated = redis_client.zrevrangebyscore("list_detail_version_index", min=0, max=10**18)
+    return updated[:200]
 
 
 @router.get("/redis/pending-app-channels")
@@ -115,7 +110,14 @@ def update_local_detail_from_redis(ctx=Depends(get_ctx)):
     redis_client = ctx.redis
     local_list_data = {}
     for i in redis_client.scan_iter():
-        if i in ["waiting_update_list_detail", "waiting_update_app_channel_list", "all_apps"]:
+        if i in [
+            "waiting_update_list_detail",
+            "waiting_update_app_channel_list",
+            "all_apps",
+            "list_detail_version_seq",
+            "list_detail_version",
+            "list_detail_version_index",
+        ]:
             continue
         if i[:3] == "AC_" or i[:13] == "chat_sentinel":
             continue
@@ -139,7 +141,14 @@ def get_redis_list_detail(ctx=Depends(get_ctx)):
     redis_client = ctx.redis
     local_list_data = {}
     for i in redis_client.scan_iter():
-        if i in ["waiting_update_list_detail", "waiting_update_app_channel_list", "all_apps"]:
+        if i in [
+            "waiting_update_list_detail",
+            "waiting_update_app_channel_list",
+            "all_apps",
+            "list_detail_version_seq",
+            "list_detail_version",
+            "list_detail_version_index",
+        ]:
             continue
         if i[:3] == "AC_" or i[:13] == "chat_sentinel":
             continue
@@ -173,11 +182,18 @@ def reset_waiting_update_app_channel_list(ctx=Depends(get_ctx)):
 def reset_waiting_update_list_detail(ctx=Depends(get_ctx)):
     redis_client = ctx.redis
     for i in redis_client.scan_iter():
-        if i in ["waiting_update_list_detail", "waiting_update_app_channel_list", "all_apps"]:
+        if i in [
+            "waiting_update_list_detail",
+            "waiting_update_app_channel_list",
+            "all_apps",
+            "list_detail_version_seq",
+            "list_detail_version",
+            "list_detail_version_index",
+        ]:
             continue
         if i[:3] == "AC_" or i[:13] == "chat_sentinel":
             continue
-        redis_client.zadd("waiting_update_list_detail", {i: int(time.time())})
+        bump_list_detail_version(redis_client, i)
     return success_response(msg="重置成功")
 
 

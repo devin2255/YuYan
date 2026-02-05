@@ -1,4 +1,4 @@
-from typing import List, Optional, Union
+from typing import List, Optional
 
 from .common import APIModel
 
@@ -11,9 +11,11 @@ class CreateOrUpdateNameList(APIModel):
     suggest: int
     risk_type: int
     status: Optional[int] = 1
-    language: Optional[str] = "all"
-    channel: Union[List[int], int]
-    app_id: Union[List[str], str]
+    language_scope: str
+    language_codes: Optional[List[str]] = None
+    scope: str
+    app_ids: Optional[List[str]] = None
+    channel_ids: Optional[List[int]] = None
     username: str
 
 

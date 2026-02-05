@@ -2,14 +2,14 @@ from fastapi import APIRouter, Depends
 
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db
+from app.api.deps import get_db, get_current_user
 from app.schemas.risk_type import CreateRiskType
 from app.services import risk_type_service
 from app.services.response import success_response
 from app.services.serializer import to_dict
 from app.services.validators import FormProxy
 
-router = APIRouter(prefix="/risk-types")
+router = APIRouter(prefix="/risk-types", dependencies=[Depends(get_current_user)])
 
 
 @router.get("")

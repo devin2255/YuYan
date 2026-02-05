@@ -130,6 +130,31 @@ class FakeRedis:
     def set(self, key, value):
         self._strings[key] = value
 
+    def incr(self, key, amount=1):
+        current = int(self._strings.get(key, 0))
+        current += amount
+        self._strings[key] = current
+        return current
+
+    def setex(self, key, time, value):
+        self._strings[key] = value
+
+    def delete(self, key):
+        removed = 0
+        if key in self._strings:
+            self._strings.pop(key, None)
+            removed += 1
+        if key in self._hashes:
+            self._hashes.pop(key, None)
+            removed += 1
+        if key in self._sets:
+            self._sets.pop(key, None)
+            removed += 1
+        if key in self._zsets:
+            self._zsets.pop(key, None)
+            removed += 1
+        return removed
+
 
 @pytest.fixture
 def fake_redis():
@@ -189,4 +214,23 @@ def client(monkeypatch, tmp_path, fake_redis):
     with TestClient(app) as test_client:
         ctx = test_client.app.state.ctx
         ctx.config["BLACK_CLIENT_IP"] = ["1.1.1.1"]
+        session = test_client.app.state.SessionLocal()
+        try:
+            from app.models.user import User
+            from app.services import auth_service
+
+            user = User(
+                identity="tester",
+                display_name="tester",
+                password_hash=auth_service.hash_password("password"),
+                roles="admin",
+                status=1,
+            )
+            session.add(user)
+            session.commit()
+            session.refresh(user)
+            token = auth_service.create_access_token(ctx, user)
+            test_client.headers.update({"Authorization": f"Bearer {token}"})
+        finally:
+            session.close()
         yield test_client

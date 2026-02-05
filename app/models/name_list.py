@@ -5,6 +5,8 @@ from app.utils.enums import (
     ListMatchRuleEnum,
     ListMatchTypeEnum,
     ListRiskTypeEnum,
+    ListLanguageScopeEnum,
+    ListScopeEnum,
     ListStatusEnum,
     ListSuggestEnum,
     ListTypeEnum,
@@ -22,6 +24,8 @@ class NameList(BaseModel):
     _risk_type = Column("risk_type", Integer)
     _status = Column("status", Boolean(), default=1)
     language = Column(String(50))
+    scope = Column(String(20), nullable=False, default=ListScopeEnum.APP_CHANNEL.value)
+    language_scope = Column(String(20), nullable=False, default=ListLanguageScopeEnum.ALL.value)
 
     @property
     def type(self):

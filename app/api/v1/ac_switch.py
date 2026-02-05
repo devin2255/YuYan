@@ -2,14 +2,14 @@ from fastapi import APIRouter, Depends
 
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_ctx, get_db
+from app.api.deps import get_ctx, get_db, get_current_user
 from app.schemas.switch import CreateACSwitch, UpdateACSwitch
 from app.services import app_service, switch_service
 from app.services.response import success_response
 from app.services.serializer import to_dict
 from app.services.validators import FormProxy
 
-router = APIRouter(prefix="/ac-switches")
+router = APIRouter(prefix="/ac-switches", dependencies=[Depends(get_current_user)])
 
 
 @router.get("/{id}")

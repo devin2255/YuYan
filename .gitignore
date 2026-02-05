@@ -44,6 +44,12 @@ ENV/
 *.log
 logs/
 
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+
 # Alembic cache
 alembic/__pycache__/
 alembic/versions/__pycache__/

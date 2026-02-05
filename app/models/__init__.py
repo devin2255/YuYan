@@ -9,4 +9,6 @@ from app.models.list_detail import ListDetail  # noqa: F401
 from app.models.list_app_channel import ListAppChannel  # noqa: F401
 from app.models.model_threshold import ModelThreshold  # noqa: F401
 from app.models.name_list import NameList  # noqa: F401
+from app.models.name_list_language import NameListLanguage  # noqa: F401
 from app.models.risk_type import RiskType  # noqa: F401
+from app.models.user import User  # noqa: F401

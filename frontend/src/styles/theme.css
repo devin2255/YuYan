@@ -1,0 +1,20 @@
+:root {
+  --bg-0: #f4efe7;
+  --bg-1: #efe5d6;
+  --ink-0: #1d1f23;
+  --ink-1: #3c4050;
+  --muted: #7a7f8a;
+  --brand: #e4572e;
+  --brand-ink: #fff4ed;
+  --accent: #2a9d8f;
+  --accent-2: #274c77;
+  --surface: #fbf8f2;
+  --surface-2: #f0e7da;
+  --line: rgba(29, 31, 35, 0.1);
+  --shadow: 0 22px 50px rgba(36, 28, 20, 0.12);
+  --radius-xl: 24px;
+  --radius-lg: 18px;
+  --radius-md: 12px;
+  --radius-sm: 8px;
+  --font-sans: "Space Grotesk", "Noto Sans SC", "IBM Plex Sans", sans-serif;
+}
